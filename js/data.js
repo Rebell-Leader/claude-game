@@ -272,6 +272,44 @@ const TRAINERS = {
 
 const STARTERS = ['Pebbawa', 'Sunnyrax', 'Sproutawa'];
 
+// Time of day advances every 10 exploration steps (resting skips a phase).
+// mods multiply encounter weights per species type; goldenDiv is shiny odds.
+const PHASES = [
+  { id: 'dawn',  icon: '🌅', name: 'Dawn',  tint: 'rgba(255,160,90,0.18)', hint: 'golden awawas love this light', mods: { Wind: 1.5, Sun: 1.2 }, goldenDiv: 20 },
+  { id: 'day',   icon: '☀️', name: 'Day',   tint: 'rgba(255,255,255,0)',   hint: 'sun-baskers everywhere',       mods: { Sun: 1.5, Dream: 0.6 }, goldenDiv: 40 },
+  { id: 'dusk',  icon: '🌇', name: 'Dusk',  tint: 'rgba(150,60,110,0.22)', hint: 'the valley starts to sing',    mods: { Leaf: 1.3, Sound: 1.3 }, goldenDiv: 40 },
+  { id: 'night', icon: '🌙', name: 'Night', tint: 'rgba(15,20,60,0.42)',   hint: 'dream awawas are about',       mods: { Dream: 2.5, Sound: 1.5, Sun: 0.3 }, goldenDiv: 40 },
+];
+
+// Scree, your rival. Ambushes you on your next step after every badge,
+// always packing the starter that counters yours — and it evolves too.
+const RIVAL = {
+  name: 'Scree', avatar: '😼',
+  counter: { Pebbawa: 'Sproutawa', Sunnyrax: 'Pebbawa', Sproutawa: 'Sunnyrax' },
+  lines: {
+    Pebbawa: ['Pebbawa', 'Bouldawa', 'Cliffawa'],
+    Sunnyrax: ['Sunnyrax', 'Solawa', 'Blazerax'],
+    Sproutawa: ['Sproutawa', 'Fernrax', 'Canopawa'],
+  },
+  fights: [
+    { fillers: [], starterStage: 0, level: 9, coins: 60,
+      intro: "Scree! You got a badge?! I've been training since SUNRISE. Battle me!",
+      winQuip: 'Wha— I had a strategy and everything!' },
+    { fillers: ['Whistlerax'], starterStage: 1, level: 15, coins: 120,
+      intro: "Two badges means nothing if you can't beat me. Scree!",
+      winQuip: 'Lucky wind. LUCKY. WIND.' },
+    { fillers: ['Screechawa', 'Dozawa'], starterStage: 1, level: 21, coins: 200,
+      intro: 'I taught my team to scream in harmony. Prepare your ears!',
+      winQuip: "We'll rehearse a sadder harmony now…" },
+    { fillers: ['Yellawa', 'Galewa'], starterStage: 2, level: 28, coins: 320,
+      intro: "Four badges each. One of us is the best. Spoiler: it's me. SCREE!",
+      winQuip: 'Spoiler… it was you…' },
+    { fillers: ['Echorax', 'Snoozerax', 'Grumpawa'], starterStage: 2, level: 35, coins: 500,
+      intro: "Champion. Final battle. Everything I've got. SCREEEEEE!",
+      winQuip: '…That was awesome. Rivals forever, deal?' },
+  ],
+};
+
 // Each zone has a guardian Elder — a boss trial. Beating it earns a badge,
 // which is the intended way to unlock the next zone (high level also works).
 const ELDERS = {
@@ -322,6 +360,9 @@ const MILESTONES = [
   { id: 'wanderer',     icon: '👣', name: 'Wanderer',         desc: 'Take 100 exploration steps',        check: s => s.stats.steps >= 100, reward: { coins: 40 } },
   { id: 'trainer-5',    icon: '🤝', name: 'Rival Rumble',     desc: 'Defeat 5 trainers',                 check: s => s.stats.trainerWins >= 5, reward: { coins: 100 } },
   { id: 'trainer-20',   icon: '🏵️', name: 'People Person',    desc: 'Defeat 20 trainers',                check: s => s.stats.trainerWins >= 20, reward: { coins: 250, items: { 'Comfy Blanket': 1 } } },
+  { id: 'rival-final',  icon: '😼', name: 'Rivals Forever',   desc: 'Win all 5 battles against Scree',   check: s => s.rival.fights >= 5, reward: { coins: 400 } },
+  { id: 'tower-10',     icon: '🗼', name: 'Tower Climber',    desc: 'Reach floor 10 of the Scream Tower', check: s => s.tower.best >= 10, reward: { coins: 300 } },
+  { id: 'tower-25',     icon: '🌋', name: 'Scream Ascendant', desc: 'Reach floor 25 of the Scream Tower', check: s => s.tower.best >= 25, reward: { coins: 800 } },
   { id: 'level-30',     icon: '📈', name: 'Personal Trainer', desc: 'Raise an awawa to level 30',        check: s => s.party.some(m => m.level >= 30), reward: { coins: 100 } },
   { id: 'full-party',   icon: '🎒', name: 'Full House',       desc: 'Have 6 awawas in your party',       check: s => s.party.length >= 6, reward: { items: { 'Big Snack': 1 } } },
 ];

@@ -160,6 +160,7 @@ const Battle = {
       let xp = Game.xpReward(b.enemy);
       if (b.trainer) {
         Game.state.stats.trainerWins += 1;
+        if (b.trainer.rival) Game.state.rival.fights += 1;
         const coins = b.trainer.def.coins;
         Game.state.coins += coins;
         events.push({ t: 'msg', text: `"${b.trainer.def.winQuip}" — ${b.trainer.def.name}` });

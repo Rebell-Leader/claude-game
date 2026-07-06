@@ -12,11 +12,15 @@ const Game = {
       coins: 60,
       items: { 'Pebble': 5, 'Snack': 2 },
       party: [this.makeAwawa(starterSpecies, 5)],
+      starter: starterSpecies,
       dex: { seen: {}, caught: {}, golden: {} },
       zone: 'cliffs',
       badges: {},
       milestones: {},
       endingSeen: false,
+      time: { phase: 1, steps: 0 }, // start at Day
+      rival: { fights: 0 },
+      tower: { best: 0 },
       stats: { battles: 0, catches: 0, steps: 0, evolutions: 0, trainerWins: 0 },
     };
     this.markDex(starterSpecies, true);
@@ -44,6 +48,57 @@ const Game = {
 
   heldSpec(mon) {
     return (mon && mon.held && ITEMS[mon.held] && ITEMS[mon.held].held) || null;
+  },
+
+  // ---- time of day ----
+  phase() {
+    return PHASES[this.state.time.phase];
+  },
+
+  // Advances the day-cycle counter; returns true when the phase flips.
+  advanceTime(phases = 0) {
+    const t = this.state.time;
+    if (phases > 0) {
+      t.steps = 0;
+      t.phase = (t.phase + phases) % PHASES.length;
+      return true;
+    }
+    t.steps += 1;
+    if (t.steps >= 10) {
+      t.steps = 0;
+      t.phase = (t.phase + 1) % PHASES.length;
+      return true;
+    }
+    return false;
+  },
+
+  // Your rival's team scales with how many times you've beaten them.
+  makeRival() {
+    const s = this.state;
+    const f = RIVAL.fights[Math.min(s.rival.fights, RIVAL.fights.length - 1)];
+    const counterRoot = RIVAL.counter[s.starter] || 'Sproutawa';
+    const starterSpecies = RIVAL.lines[counterRoot][f.starterStage];
+    const team = [...f.fillers, starterSpecies];
+    const queue = team.map((sp, i) => this.makeAwawa(sp, Math.max(2, f.level - (team.length - 1 - i))));
+    return {
+      def: { name: RIVAL.name, avatar: RIVAL.avatar, coins: f.coins, intro: f.intro, winQuip: f.winQuip },
+      queue, idx: 0, rival: true,
+    };
+  },
+
+  // Scream Tower floors: escalating wilds, a heavy-hitter every 5th floor,
+  // and better shiny odds. Everything is catchable — that's the draw.
+  towerEnemy(floor) {
+    const golden = Math.random() < 1 / 30;
+    if (floor % 5 === 0) {
+      const pool = ['Cliffawa', 'Blazerax', 'Canopawa', 'Echorax', 'Snoozerax', 'Grumpawa'];
+      if (floor >= 20) pool.push('The Great Awawa');
+      const species = pool[Math.floor(Math.random() * pool.length)];
+      return this.makeAwawa(species, Math.min(50, 25 + floor * 2), { golden });
+    }
+    const names = Object.keys(SPECIES).filter(n => !SPECIES[n].legendary);
+    const species = names[Math.floor(Math.random() * names.length)];
+    return this.makeAwawa(species, Math.min(50, 22 + floor * 2), { golden });
   },
 
   // Builds a random trainer encounter for a zone: {def, queue}.
@@ -212,16 +267,21 @@ const Game = {
     return true;
   },
 
-  // ---- encounters ----
+  // ---- encounters (time-of-day aware) ----
   rollEncounter(zone) {
-    const total = zone.encounters.reduce((s, e) => s + e.w, 0);
+    const phase = this.phase();
+    const weighted = zone.encounters.map(e => ({
+      species: e.species,
+      w: e.w * (phase.mods[SPECIES[e.species].type] || 1),
+    }));
+    const total = weighted.reduce((s, e) => s + e.w, 0);
     let r = Math.random() * total;
-    for (const e of zone.encounters) {
+    for (const e of weighted) {
       r -= e.w;
       if (r <= 0) {
         const [lo, hi] = zone.levels;
         const level = lo + Math.floor(Math.random() * (hi - lo + 1));
-        return this.makeAwawa(e.species, level, { golden: Math.random() < 1 / 40 });
+        return this.makeAwawa(e.species, level, { golden: Math.random() < 1 / phase.goldenDiv });
       }
     }
     return this.makeAwawa(zone.encounters[0].species, zone.levels[0]);
@@ -247,6 +307,13 @@ const Game = {
       s.endingSeen = !!s.endingSeen;
       s.stats.evolutions = s.stats.evolutions || 0;
       s.stats.trainerWins = s.stats.trainerWins || 0;
+      s.time = s.time || { phase: 1, steps: 0 };
+      s.rival = s.rival || { fights: 0 };
+      s.tower = s.tower || { best: 0 };
+      if (!s.starter) {
+        // Old save: infer the starter from any caught line, else default.
+        s.starter = STARTERS.find(st => RIVAL.lines[st].some(sp => s.dex.caught[sp])) || 'Pebbawa';
+      }
       this.state = s;
       return true;
     } catch (e) {

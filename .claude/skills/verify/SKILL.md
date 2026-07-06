@@ -50,6 +50,17 @@ global module at `/opt/node22/lib/node_modules/playwright`).
 11. Held charms: buy under the shop's "Held Charms" section, equip via
     party → Info → `party-held` → `held-set` (arg `idx|Item Name`).
     Swapping must return the previous charm to the bag.
+12. Day/night: `Game.state.time` {phase, steps}; phase flips every 10 explores
+    and on Rest. Assert `.phase-chip` text and the `--phase-tint` CSS var.
+    Distribution check: set phase 3 (night) and sample `Game.rollEncounter`
+    on the oasis — Dream types should dominate (~65%+).
+13. Rival: seed a save with `badges: {cliffs:true}, rival: {fights:0}` — the
+    next explore MUST be Scree (`Battle.cur.trainer.rival === true`), fielding
+    the counter line for `state.starter`. A win bumps `rival.fights`.
+14. Scream Tower: needs all 5 badges (set `endingSeen: true` in test saves to
+    skip the ending flow). Hub shows `tower-enter`. Win floor →
+    interstitial with `tower-next`/`tower-leave`; flee ends the run back to
+    the hub; `tower.best` persists; loss halves coins like a normal wipe.
 
 ## Gotchas
 

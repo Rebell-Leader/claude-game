@@ -17,10 +17,15 @@
 
 html, body { height: 100%; }
 
+:root { --phase-tint: rgba(255, 255, 255, 0); }
+
 body {
   font-family: "Trebuchet MS", "Segoe UI", system-ui, -apple-system, sans-serif;
   color: var(--ink);
-  background: linear-gradient(160deg, var(--zone-a), var(--zone-b)) fixed;
+  background-image:
+    linear-gradient(var(--phase-tint), var(--phase-tint)),
+    linear-gradient(160deg, var(--zone-a), var(--zone-b));
+  background-attachment: fixed;
   transition: background 0.8s ease;
   display: flex;
   justify-content: center;
@@ -142,6 +147,12 @@ button.danger { background: var(--bad); color: #fff; }
   font-size: 0.95rem;
 }
 .elder-btn.earned { background: linear-gradient(120deg, #b9932e, #8a6d1c); }
+.elder-btn.tower-btn { background: linear-gradient(120deg, #3b3b58, #191927); }
+
+.phase-chip {
+  display: inline-block; margin-top: 4px; font-size: 0.8rem; font-weight: 800;
+  background: rgba(43, 36, 32, 0.09); border-radius: 999px; padding: 2px 12px;
+}
 
 .badge-row { display: flex; gap: 8px; justify-content: center; margin: 10px 0 2px; }
 .badge-slot {
@@ -215,7 +226,17 @@ button.danger { background: var(--bad); color: #fff; }
   margin-bottom: 12px;
   box-shadow: var(--shadow);
 }
+.battle-stage::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: var(--phase-tint);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+}
 .combatant { position: absolute; text-align: center; }
+.statbox { z-index: 2; }
+.pebble-fly, .dmg-float, .badge-pop { z-index: 6; }
 .combatant.enemy { top: 16px; right: 18px; }
 .combatant.player { bottom: 10px; left: 18px; }
 .combatant .sprite { animation: idle-bounce 2.6s ease-in-out infinite; }

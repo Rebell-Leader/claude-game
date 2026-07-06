@@ -19,6 +19,7 @@ const UI = {
     r.setProperty('--zone-a', zone.palette[0]);
     r.setProperty('--zone-b', zone.palette[1]);
     r.setProperty('--zone-ground', zone.ground);
+    r.setProperty('--phase-tint', Game.state ? Game.phase().tint : 'rgba(255,255,255,0)');
   },
 
   currentZone() {
@@ -129,6 +130,7 @@ const UI = {
       <div class="panel zone-banner">
         <div class="zone-name">${zone.icon} ${zone.name}</div>
         <p class="muted">${zone.blurb}</p>
+        <p class="phase-chip">${Game.phase().icon} ${Game.phase().name} — ${Game.phase().hint}</p>
         ${flash ? `<p class="event-flash" style="font-weight:800;margin-top:6px">${flash}</p>` : ''}
         <div class="explore-wrap">
           <button class="primary big" data-action="explore">👣 Explore</button>
@@ -136,6 +138,9 @@ const UI = {
         <p class="muted">Wild awawas: Lv ${zone.levels[0]}–${zone.levels[1]}</p>
         ${elder ? `<button class="elder-btn ${s.badges[zone.id] ? 'earned' : ''}" data-action="elder-challenge">
           ⚔️ Elder Trial — ${elder.name} (Lv ${elder.level}) ${s.badges[zone.id] ? elder.icon + ' ✓' : ''}
+        </button>` : ''}
+        ${Object.keys(s.badges).length >= 5 ? `<button class="elder-btn tower-btn" data-action="tower-enter">
+          🗼 Scream Tower — endless gauntlet${s.tower.best ? ` (best: floor ${s.tower.best})` : ''}
         </button>` : ''}
       </div>
       <div class="panel">
@@ -187,7 +192,7 @@ const UI = {
       ${this.topbar()}
       <div class="back-row"><button data-action="go-hub">← Back</button></div>
       <div class="panel"><h2>📖 Journal</h2>
-        <p class="muted">Milestones ${doneCount}/${MILESTONES.length} · Badges ${Object.keys(s.badges).length}/5 · Battles won ${s.stats.battles} · Trainers beaten ${s.stats.trainerWins} · Catches ${s.stats.catches} · Steps ${s.stats.steps}</p>
+        <p class="muted">Milestones ${doneCount}/${MILESTONES.length} · Badges ${Object.keys(s.badges).length}/5 · Battles won ${s.stats.battles} · Trainers beaten ${s.stats.trainerWins} · Rival wins ${s.rival.fights}/5 · Tower best ${s.tower.best} · Catches ${s.stats.catches} · Steps ${s.stats.steps}</p>
       </div>
       <div class="panel">
         <h3 style="margin-bottom:8px">🏅 Badges</h3>
@@ -657,6 +662,35 @@ const UI = {
     const result = b ? b.result : null;
     const elderZone = b ? b.elderZone : null;
     Battle.cur = null;
+
+    if (this._tower) {
+      const floor = this._tower.floor;
+      if (result === 'win' || result === 'caught') {
+        const coins = 15 + floor * 6;
+        Game.state.coins += coins;
+        Game.state.tower.best = Math.max(Game.state.tower.best, floor);
+        // Catch your breath between floors: everyone standing heals a fifth.
+        for (const m of Game.state.party) {
+          if (m.hp > 0) m.hp = Math.min(m.maxHp, m.hp + Math.max(1, Math.floor(m.maxHp * 0.2)));
+        }
+        Game.save();
+        this.showTowerInterstitial(floor, coins);
+      } else if (result === 'fled') {
+        const t = this._tower;
+        this._tower = null;
+        Game.save();
+        this.showHub(`🗼 You slipped out of the Scream Tower at floor ${t.floor}.`);
+      } else { // lose
+        this._tower = null;
+        const lost = Math.floor(Game.state.coins / 2);
+        Game.state.coins -= lost;
+        Game.healParty();
+        Game.save();
+        this.showHub(`😵 The tower spat you out at the resting rock. Lost 🪙 ${lost}. Party healed.`);
+      }
+      return;
+    }
+
     if (result === 'lose') {
       const lost = Math.floor(Game.state.coins / 2);
       Game.state.coins -= lost;
@@ -673,11 +707,66 @@ const UI = {
     }
   },
 
+  // ---------- Scream Tower ----------
+  startTowerFloor() {
+    const lead = Game.firstHealthy();
+    if (!lead) {
+      this._tower = null;
+      this.showHub('🗼 Your whole party has fainted — the tower ejects you gently.');
+      return;
+    }
+    Battle.start(lead, Game.towerEnemy(this._tower.floor));
+    Game.save();
+    this.showBattle();
+  },
+
+  showTowerInterstitial(clearedFloor, coins) {
+    const next = clearedFloor + 1;
+    const bossNext = next % 5 === 0;
+    this._tower.floor = next;
+    this.render(`
+      ${this.topbar()}
+      <div class="panel ending-panel">
+        <h2>🗼 Floor ${clearedFloor} cleared!</h2>
+        <p style="font-weight:700;margin:8px 0">+🪙 ${coins} · Best: floor ${Game.state.tower.best}</p>
+        <p class="muted">Your party catches its breath (+20% HP each).
+        ${bossNext ? '<br><b>Something enormous is stomping around on the next floor…</b>' : ''}</p>
+        <div class="party-strip" style="margin:12px 0">
+          ${Game.state.party.map(m => `<div class="party-slot ${m.hp <= 0 ? 'fainted' : ''}">${monSVG(m, { size: 56 })}
+            <div>${this.esc(Game.displayName(m)).slice(0, 10)}</div><div class="lv">${m.hp}/${m.maxHp}</div></div>`).join('')}
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <button class="primary big" data-action="tower-next">⬆️ Floor ${next} ${bossNext ? '👹' : ''}</button>
+          <button class="big" data-action="tower-leave">🚪 Leave with winnings</button>
+        </div>
+      </div>`);
+  },
+
   // ---------- exploration ----------
   explore() {
     const s = Game.state;
     const zone = this.currentZone();
     s.stats.steps += 1;
+    if (Game.advanceTime()) {
+      const p = Game.phase();
+      this.toast(`${p.icon} It is now ${p.name.toLowerCase()} — ${p.hint}.`);
+    }
+
+    // Scree ambushes on your first step after each new badge (and keeps
+    // coming back for a rematch until beaten).
+    if (Object.keys(s.badges).length > s.rival.fights && s.rival.fights < RIVAL.fights.length) {
+      const lead = Game.firstHealthy();
+      if (!lead) {
+        this.toast('Your whole party has fainted! Rest first.');
+        return;
+      }
+      const trainer = Game.makeRival();
+      Battle.start(lead, trainer.queue[0], { trainer });
+      Game.save();
+      this.showBattle();
+      return;
+    }
+
     const roll = Math.random();
 
     if (roll < 0.50) {
@@ -761,7 +850,18 @@ const UI = {
         this.showHub(`🎉 ${arg} joined you! Your journey begins.`);
         break;
       }
-      case 'go-hub': this.showHub(); break;
+      case 'go-hub': this._tower = null; this.showHub(); break;
+      case 'tower-enter':
+        this._tower = { floor: 1 };
+        this.startTowerFloor();
+        break;
+      case 'tower-next': Sound.fx('click'); this.startTowerFloor(); break;
+      case 'tower-leave': {
+        const t = this._tower;
+        this._tower = null;
+        this.showHub(`🗼 You descend from floor ${t ? t.floor - 1 : '?'} with your winnings. The tower screams goodbye.`);
+        break;
+      }
       case 'explore': Sound.fx('click'); this.explore(); break;
       case 'elder-challenge': {
         const zone = this.currentZone();
@@ -774,12 +874,15 @@ const UI = {
         this.showBattle();
         break;
       }
-      case 'rest':
+      case 'rest': {
         Game.healParty();
+        Game.advanceTime(1); // napping passes the time of day
         Sound.fx('heal');
         Game.save();
-        this.showHub('🛏️ Your party napped on a warm rock. Fully healed!');
+        const p = Game.phase();
+        this.showHub(`🛏️ Your party napped on a warm rock. Fully healed! You wake at ${p.icon} ${p.name.toLowerCase()}.`);
         break;
+      }
       case 'show-zones': this.showZones(); break;
       case 'travel': {
         s.zone = arg;
