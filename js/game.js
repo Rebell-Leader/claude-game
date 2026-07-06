@@ -17,7 +17,7 @@ const Game = {
       badges: {},
       milestones: {},
       endingSeen: false,
-      stats: { battles: 0, catches: 0, steps: 0, evolutions: 0 },
+      stats: { battles: 0, catches: 0, steps: 0, evolutions: 0, trainerWins: 0 },
     };
     this.markDex(starterSpecies, true);
     this.save();
@@ -34,11 +34,26 @@ const Game = {
       xp: 0,
       golden: !!opts.golden,
       boost: opts.boost || 1,
+      held: null,
       moves: this.movesAtLevel(speciesName, level),
     };
     mon.maxHp = Math.floor(this.statAt(sp.base.hp, level, true) * mon.boost);
     mon.hp = mon.maxHp;
     return mon;
+  },
+
+  heldSpec(mon) {
+    return (mon && mon.held && ITEMS[mon.held] && ITEMS[mon.held].held) || null;
+  },
+
+  // Builds a random trainer encounter for a zone: {def, queue}.
+  makeTrainer(zone) {
+    const defs = TRAINERS[zone.id];
+    if (!defs || !defs.length) return null;
+    const def = defs[Math.floor(Math.random() * defs.length)];
+    const mid = Math.round((zone.levels[0] + zone.levels[1]) / 2);
+    const queue = def.team.map(sp => this.makeAwawa(sp, Math.max(2, mid + Math.floor(Math.random() * 3) - 1)));
+    return { def, queue, idx: 0 };
   },
 
   makeElderMon(elder) {
@@ -231,6 +246,7 @@ const Game = {
       s.milestones = s.milestones || {};
       s.endingSeen = !!s.endingSeen;
       s.stats.evolutions = s.stats.evolutions || 0;
+      s.stats.trainerWins = s.stats.trainerWins || 0;
       this.state = s;
       return true;
     } catch (e) {

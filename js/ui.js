@@ -187,7 +187,7 @@ const UI = {
       ${this.topbar()}
       <div class="back-row"><button data-action="go-hub">← Back</button></div>
       <div class="panel"><h2>📖 Journal</h2>
-        <p class="muted">Milestones ${doneCount}/${MILESTONES.length} · Badges ${Object.keys(s.badges).length}/5 · Battles won ${s.stats.battles} · Catches ${s.stats.catches} · Steps ${s.stats.steps}</p>
+        <p class="muted">Milestones ${doneCount}/${MILESTONES.length} · Badges ${Object.keys(s.badges).length}/5 · Battles won ${s.stats.battles} · Trainers beaten ${s.stats.trainerWins} · Catches ${s.stats.catches} · Steps ${s.stats.steps}</p>
       </div>
       <div class="panel">
         <h3 style="margin-bottom:8px">🏅 Badges</h3>
@@ -232,10 +232,12 @@ const UI = {
           <div class="grow">
             <div class="nm">${m.golden ? '✨' : ''}${this.esc(Game.displayName(m))} <span class="muted">Lv ${m.level}</span> ${this.chip(sp.type)}</div>
             ${this.hpBarHtml(m, true)}
-            ${sel ? `<div class="sub" style="margin-top:4px">ATK ${st.atk} · DEF ${st.def} · SPD ${st.spd}<br>Moves: ${m.moves.join(', ')}</div>
-            <div style="display:flex;gap:6px;margin-top:6px">
+            ${sel ? `<div class="sub" style="margin-top:4px">ATK ${st.atk} · DEF ${st.def} · SPD ${st.spd}<br>Moves: ${m.moves.join(', ')}<br>
+              Held: ${m.held ? `${ITEMS[m.held].icon} ${m.held}` : 'nothing'}</div>
+            <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
               <button data-action="party-name" data-arg="${i}">✏️ Name</button>
               <button data-action="party-moves" data-arg="${i}">📖 Moves</button>
+              <button data-action="party-held" data-arg="${i}">🎁 Held</button>
             </div>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;gap:4px">
@@ -282,6 +284,33 @@ const UI = {
       </div>`);
   },
 
+  showHeldPicker(idx) {
+    const mon = Game.state.party[idx];
+    if (!mon) return this.showParty();
+    const owned = Object.entries(Game.state.items).filter(([n]) => ITEMS[n].held);
+    this.render(`
+      ${this.topbar()}
+      <div class="back-row"><button data-action="show-party">← Back</button></div>
+      <div class="panel">
+        <h2>🎁 ${this.esc(Game.displayName(mon))}'s Held Charm</h2>
+        <p class="muted">A held charm works automatically in battle. One per awawa.</p>
+      </div>
+      ${mon.held ? `<div class="list-row selected">
+        <div style="font-size:1.6rem">${ITEMS[mon.held].icon}</div>
+        <div class="grow"><div class="nm">${mon.held} <span class="muted">(equipped)</span></div>
+        <div class="sub">${ITEMS[mon.held].desc}</div></div>
+        <button class="danger" data-action="held-remove" data-arg="${idx}">Remove</button>
+      </div>` : ''}
+      ${owned.length ? owned.map(([n, count]) => `
+        <div class="list-row">
+          <div style="font-size:1.6rem">${ITEMS[n].icon}</div>
+          <div class="grow"><div class="nm">${n} <span class="muted">×${count}</span></div>
+          <div class="sub">${ITEMS[n].desc}</div></div>
+          <button class="primary" data-action="held-set" data-arg="${idx}|${n}">Equip</button>
+        </div>`).join('')
+      : '<div class="panel"><p class="muted">No charms in your bag — the shop sells them under "Held Charms".</p></div>'}`);
+  },
+
   showDex(detailName) {
     const s = Game.state;
     const names = Object.keys(SPECIES).sort((a, b) => SPECIES[a].dex - SPECIES[b].dex);
@@ -320,19 +349,24 @@ const UI = {
 
   showShop() {
     const s = Game.state;
+    const row = ([name, it]) => `
+      <div class="list-row">
+        <div style="font-size:1.8rem">${it.icon}</div>
+        <div class="grow">
+          <div class="nm">${name} <span class="muted">×${s.items[name] || 0} owned</span></div>
+          <div class="sub">${it.desc}</div>
+        </div>
+        <button class="primary" data-action="buy" data-arg="${name}" ${s.coins < it.price ? 'disabled' : ''}>🪙 ${it.price}</button>
+      </div>`;
+    const entries = Object.entries(ITEMS);
     this.render(`
       ${this.topbar()}
       <div class="back-row"><button data-action="go-hub">← Back</button></div>
       <div class="panel"><h2>🛒 Rock Bottom Prices</h2><p class="muted">A shrewd-looking awawa runs this stall. All sales final.</p></div>
-      ${Object.entries(ITEMS).map(([name, it]) => `
-        <div class="list-row">
-          <div style="font-size:1.8rem">${it.icon}</div>
-          <div class="grow">
-            <div class="nm">${name} <span class="muted">×${s.items[name] || 0} owned</span></div>
-            <div class="sub">${it.desc}</div>
-          </div>
-          <button class="primary" data-action="buy" data-arg="${name}" ${s.coins < it.price ? 'disabled' : ''}>🪙 ${it.price}</button>
-        </div>`).join('')}`);
+      <div class="panel"><h3>Supplies</h3></div>
+      ${entries.filter(([, it]) => !it.held).map(row).join('')}
+      <div class="panel"><h3>Held Charms <span class="muted" style="font-weight:600">— equip from the Party screen</span></h3></div>
+      ${entries.filter(([, it]) => it.held).map(row).join('')}`);
   },
 
   showEnding() {
@@ -363,6 +397,9 @@ const UI = {
     Music.play(b.elder ? 'boss' : 'battle');
     const introLine = b.elder
       ? `<p><i>${b.elder.intro}</i></p><p><b>${b.elder.name}</b> (Lv ${b.enemy.level}) challenges you!</p>`
+      : b.trainer
+      ? `<p>${b.trainer.def.avatar} <b>${b.trainer.def.name}</b> wants to battle! <i>"${b.trainer.def.intro}"</i></p>
+         <p>${b.trainer.def.name} sends out <b>${b.enemy.species}</b> (Lv ${b.enemy.level})!</p>`
       : `<p>A ${b.enemy.golden ? '<b>✨ golden</b> ' : 'wild '}<b>${b.enemy.species}</b> (Lv ${b.enemy.level}) appeared!</p>`;
     this.render(`
       ${this.topbar()}
@@ -384,8 +421,13 @@ const UI = {
     if (!b) return;
     const eBox = document.getElementById('enemy-box');
     const pBox = document.getElementById('player-box');
-    const eName = b.elder ? `👑 ${b.elder.name}` : `${b.enemy.golden ? '✨ ' : ''}${b.enemy.species}`;
-    if (eBox) eBox.innerHTML = `<div class="row1"><span>${eName}</span><span>Lv ${b.enemy.level}</span></div>${this.hpBarHtml(b.enemy)}`;
+    const eName = b.elder ? `👑 ${b.elder.name}`
+      : b.trainer ? `${b.trainer.def.avatar} ${b.enemy.species}`
+      : `${b.enemy.golden ? '✨ ' : ''}${b.enemy.species}`;
+    const pips = b.trainer
+      ? `<div class="team-pips">${b.trainer.queue.map((m, i) => i < b.trainer.idx ? '○' : '●').join(' ')}</div>`
+      : '';
+    if (eBox) eBox.innerHTML = `<div class="row1"><span>${eName}</span><span>Lv ${b.enemy.level}</span></div>${pips}${this.hpBarHtml(b.enemy)}`;
     if (pBox) pBox.innerHTML = `<div class="row1"><span>${this.esc(Game.displayName(b.player))}</span><span>Lv ${b.player.level}</span></div>${this.hpBarHtml(b.player, true)}`;
   },
 
@@ -410,11 +452,11 @@ const UI = {
           }).join('')}
         </div>
         <div class="action-row">
-          ${b.elder
+          ${Battle.isLocked()
             ? `<button data-action="battle-menu" data-arg="snack">🥕 Snack</button>
                <button data-action="battle-menu" data-arg="switch">🔄 Switch</button>
-               <button disabled title="Elders cannot be caught">🪨 —</button>
-               <button disabled title="No running from an Elder Trial">🏃 —</button>`
+               <button disabled title="This opponent cannot be caught">🪨 —</button>
+               <button disabled title="No running from this battle">🏃 —</button>`
             : `<button data-action="battle-menu" data-arg="catch">🪨 Catch</button>
                <button data-action="battle-menu" data-arg="snack">🥕 Snack</button>
                <button data-action="battle-menu" data-arg="switch">🔄 Switch</button>
@@ -560,6 +602,19 @@ const UI = {
           await this.delay(300);
           break;
         }
+        case 'trainerNext': {
+          const el = this.spriteEl('enemy');
+          if (el) {
+            el.classList.remove('faint-anim');
+            el.innerHTML = monSVG(Battle.cur.enemy, { facing: 'left', size: 130 });
+            el.classList.add('appear-anim');
+            setTimeout(() => el.classList.remove('appear-anim'), 500);
+          }
+          Sound.cry(ev.species);
+          this.updateStatboxes();
+          await this.delay(300);
+          break;
+        }
         case 'throw': {
           Sound.fx('throw');
           const stage = document.querySelector('.battle-stage');
@@ -625,7 +680,7 @@ const UI = {
     s.stats.steps += 1;
     const roll = Math.random();
 
-    if (roll < 0.62) {
+    if (roll < 0.50) {
       const lead = Game.firstHealthy();
       if (!lead) {
         this.toast('Your whole party has fainted! Rest first.');
@@ -633,6 +688,17 @@ const UI = {
       }
       // Leader battles; if the actual leader fainted, first healthy steps up.
       Battle.start(lead, Game.rollEncounter(zone));
+      Game.save();
+      this.showBattle();
+    } else if (roll < 0.62) {
+      const lead = Game.firstHealthy();
+      if (!lead) {
+        this.toast('Your whole party has fainted! Rest first.');
+        return;
+      }
+      const trainer = Game.makeTrainer(zone);
+      if (!trainer) { this.showHub('👀 Someone was here a moment ago…'); return; }
+      Battle.start(lead, trainer.queue[0], { trainer });
       Game.save();
       this.showBattle();
     } else if (roll < 0.74) {
@@ -742,6 +808,30 @@ const UI = {
           Game.save();
         }
         this.showParty(+arg);
+        break;
+      }
+      case 'party-held': this.showHeldPicker(+arg); break;
+      case 'held-set': {
+        const [idxStr, itemName] = arg.split('|');
+        const mon = s.party[+idxStr];
+        if (mon && ITEMS[itemName] && ITEMS[itemName].held && Game.useItem(itemName)) {
+          if (mon.held) Game.addItem(mon.held); // swap the old charm back into the bag
+          mon.held = itemName;
+          Sound.fx('coin');
+          Game.save();
+          this.toast(`${ITEMS[itemName].icon} ${itemName} equipped!`);
+        }
+        this.showHeldPicker(+idxStr);
+        break;
+      }
+      case 'held-remove': {
+        const mon = s.party[+arg];
+        if (mon && mon.held) {
+          Game.addItem(mon.held);
+          mon.held = null;
+          Game.save();
+        }
+        this.showHeldPicker(+arg);
         break;
       }
       case 'party-moves': this._moveSel = null; this.showMoveEditor(+arg); break;

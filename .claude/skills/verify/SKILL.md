@@ -41,6 +41,15 @@ global module at `/opt/node22/lib/node_modules/playwright`).
    party → Info → `party-moves` → `moveedit-toggle`/`moveedit-save`.
 9. Old-save migration: writing a pre-badges save (no `badges`/`milestones`/
    `dex.golden` keys) then Continue must not throw — `Game.load()` migrates.
+10. Trainer battles: ~12% of explores; force deterministically via
+    `page.evaluate(() => { const t = { def: TRAINERS.cliffs[0], queue: TRAINERS.cliffs[0].team.map(sp => Game.makeAwawa(sp, 4)), idx: 0 };
+    Battle.start(Game.firstHealthy(), t.queue[0], { trainer: t }); UI.showBattle(); })`.
+    Assert: `.team-pips` renders, catch/run disabled, defeating a mon logs
+    "sends out" + per-knockout XP, final win pays `def.coins` and bumps
+    `stats.trainerWins`.
+11. Held charms: buy under the shop's "Held Charms" section, equip via
+    party → Info → `party-held` → `held-set` (arg `idx|Item Name`).
+    Swapping must return the previous charm to the bag.
 
 ## Gotchas
 

@@ -227,6 +227,7 @@ button.danger { background: var(--bad); color: #fff; }
   box-shadow: 0 3px 0 rgba(43,36,32,0.55);
 }
 .statbox .row1 { display: flex; justify-content: space-between; font-weight: 800; margin-bottom: 3px; gap: 8px; }
+.statbox .team-pips { font-size: 0.7rem; letter-spacing: 2px; margin-bottom: 2px; color: var(--accent-dark); }
 .statbox-pos-enemy { position: absolute; top: 14px; left: 14px; }
 .statbox-pos-player { position: absolute; bottom: 14px; right: 14px; }
 

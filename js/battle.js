@@ -11,6 +11,7 @@ const Battle = {
       enemy: wildMon,
       elder: opts.elder || null,     // elder definition when this is a boss trial
       elderZone: opts.elderZone || null,
+      trainer: opts.trainer || null, // {def, queue, idx} for trainer battles
       stages: { player: { atk: 0, def: 0 }, enemy: { atk: 0, def: 0 } },
       over: false,
       result: null, // 'win' | 'caught' | 'fled' | 'lose'
@@ -22,7 +23,12 @@ const Battle = {
   enemyLabel() {
     const b = this.cur;
     if (b.elder) return b.elder.name;
+    if (b.trainer) return `${b.trainer.def.name}'s ${b.enemy.species}`;
     return (b.enemy.golden ? '✨ Golden ' : 'Wild ') + b.enemy.species;
+  },
+
+  isLocked() { // battles you can neither catch in nor flee from
+    return !!(this.cur.elder || this.cur.trainer);
   },
 
   stageMult(stage) {
@@ -50,10 +56,13 @@ const Battle = {
     const def = this.effectiveStats(defSide).def;
     const stab = SPECIES[atkMon.species].type === move.type ? 1.5 : 1;
     const eff = typeMult(move.type, SPECIES[defMon.species].type);
-    const crit = Math.random() < 0.0625 ? 1.5 : 1;
+    const held = Game.heldSpec(atkMon);
+    const heldMult = held && held.boost === move.type ? held.mult : 1;
+    const critChance = held && held.crit ? held.crit : 0.0625;
+    const crit = Math.random() < critChance ? 1.5 : 1;
     const rand = 0.85 + Math.random() * 0.15;
     const raw = (((2 * atkMon.level) / 5 + 2) * move.power * (atk / def)) / 50 + 2;
-    return { dmg: Math.max(1, Math.floor(raw * stab * eff * crit * rand)), eff, crit: crit > 1 };
+    return { dmg: Math.max(1, Math.floor(raw * stab * eff * crit * rand * heldMult)), eff, crit: crit > 1 };
   },
 
   execMove(side, moveName, events) {
@@ -134,10 +143,30 @@ const Battle = {
   finishIfOver(events) {
     const b = this.cur;
     if (b.enemy.hp <= 0) {
+      // Trainer with awawas left: award the knockout XP and send out the next one.
+      if (b.trainer && b.trainer.idx < b.trainer.queue.length - 1) {
+        this.applyXp(events, Game.xpReward(b.enemy));
+        b.trainer.idx += 1;
+        b.enemy = b.trainer.queue[b.trainer.idx];
+        b.stages.enemy = { atk: 0, def: 0 };
+        Game.markDex(b.enemy.species, false);
+        events.push({ t: 'trainerNext', species: b.enemy.species });
+        events.push({ t: 'msg', text: `${b.trainer.def.name} sends out ${b.enemy.species}!` });
+        return true;
+      }
       b.over = true;
       b.result = 'win';
       Game.state.stats.battles += 1;
       let xp = Game.xpReward(b.enemy);
+      if (b.trainer) {
+        Game.state.stats.trainerWins += 1;
+        const coins = b.trainer.def.coins;
+        Game.state.coins += coins;
+        events.push({ t: 'msg', text: `"${b.trainer.def.winQuip}" — ${b.trainer.def.name}` });
+        events.push({ t: 'msg', text: `You beat ${b.trainer.def.name}! +${coins} coins.` });
+        this.applyXp(events, xp);
+        return true;
+      }
       if (b.elder) {
         xp = Math.floor(xp * 1.5);
         const firstWin = !Game.state.badges[b.elderZone];
@@ -215,6 +244,15 @@ const Battle = {
       this.execMove(side, mv, events);
       if (this.finishIfOver(events)) break;
     }
+
+    // End-of-round regen (Soft Moss and friends).
+    const held = Game.heldSpec(b.player);
+    if (!b.over && held && held.regen && b.player.hp > 0 && b.player.hp < b.player.maxHp) {
+      const gain = Math.max(1, Math.floor(b.player.maxHp * held.regen));
+      b.player.hp = Math.min(b.player.maxHp, b.player.hp + gain);
+      events.push({ t: 'heal', side: 'player', amount: gain });
+      events.push({ t: 'msg', text: `${Game.displayName(b.player)}'s ${b.player.held} restored ${gain} HP.` });
+    }
     return events;
   },
 
@@ -224,6 +262,10 @@ const Battle = {
     const item = ITEMS[itemName];
     if (b.elder) {
       events.push({ t: 'msg', text: `${b.elder.name} raises an eyebrow. You cannot catch an Elder.` });
+      return events;
+    }
+    if (b.trainer) {
+      events.push({ t: 'msg', text: `${b.trainer.def.name} blocks the throw. "Hey! Get your own awawa!"` });
       return events;
     }
     if (!Game.useItem(itemName)) {
@@ -302,6 +344,10 @@ const Battle = {
     const events = [];
     if (b.elder) {
       events.push({ t: 'msg', text: 'There is no running from an Elder Trial!' });
+      return events;
+    }
+    if (b.trainer) {
+      events.push({ t: 'msg', text: 'Trainers battle to the end. No running!' });
       return events;
     }
     const pSpd = this.effectiveStats('player').spd;

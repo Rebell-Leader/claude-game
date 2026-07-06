@@ -224,6 +224,50 @@ const ITEMS = {
   'Comfy Blanket': { icon: '🧣', price: 90,  desc: 'No awawa can resist a warm blanket. Best odds.', ballBonus: 2.6 },
   'Snack':         { icon: '🥕', price: 15,  desc: 'Restores 40 HP.', heal: 40 },
   'Big Snack':     { icon: '🍉', price: 45,  desc: 'Fully restores HP.', heal: 9999 },
+  // Held charms — equip one per awawa from the Party screen.
+  'Granite Chip':  { icon: '🧱', price: 140, desc: 'Held: Rock moves deal +25% damage.',  held: { boost: 'Rock',  mult: 1.25 } },
+  'Warm Pebble':   { icon: '🌞', price: 140, desc: 'Held: Sun moves deal +25% damage.',   held: { boost: 'Sun',   mult: 1.25 } },
+  'Sprout Charm':  { icon: '🌱', price: 140, desc: 'Held: Leaf moves deal +25% damage.',  held: { boost: 'Leaf',  mult: 1.25 } },
+  'Echo Horn':     { icon: '📯', price: 140, desc: 'Held: Sound moves deal +25% damage.', held: { boost: 'Sound', mult: 1.25 } },
+  'Storm Feather': { icon: '🪶', price: 140, desc: 'Held: Wind moves deal +25% damage.',  held: { boost: 'Wind',  mult: 1.25 } },
+  'Dream Locket':  { icon: '🔮', price: 140, desc: 'Held: Dream moves deal +25% damage.', held: { boost: 'Dream', mult: 1.25 } },
+  'Lucky Clover':  { icon: '🍀', price: 200, desc: 'Held: critical hit chance rises to 15%.', held: { crit: 0.15 } },
+  'Soft Moss':     { icon: '🍄', price: 220, desc: 'Held: restores 6% of max HP every round.', held: { regen: 0.06 } },
+};
+
+// Wandering trainers ambush you while exploring. Themed teams, real stakes:
+// no catching, no running, coins and per-knockout XP on the line.
+const TRAINERS = {
+  cliffs: [
+    { name: 'Rock Fan Rocco', avatar: '🧗', team: ['Pebbawa', 'Pebbawa'], coins: 35,
+      intro: 'Rocks are friends AND projectiles!', winQuip: 'My rocks… rolled away…' },
+    { name: 'Nap Coach Nia', avatar: '🧘', team: ['Sunnyrax', 'Sproutawa'], coins: 35,
+      intro: 'My team trains four hours and naps twenty!', winQuip: 'Back to the nap regimen.' },
+  ],
+  meadow: [
+    { name: 'Picnicker Poppy', avatar: '🧺', team: ['Sproutawa', 'Whistlerax'], coins: 55,
+      intro: 'You stepped on my picnic blanket. This means war.', winQuip: 'At least the sandwiches survived.' },
+    { name: 'Shepherd Sal', avatar: '🐑', team: ['Dozawa', 'Sproutawa', 'Sunnyrax'], coins: 70,
+      intro: 'My flock says you look beatable. Baa.', winQuip: 'The flock has revised its opinion.' },
+  ],
+  canyon: [
+    { name: 'Echo Cultist Vex', avatar: '📢', team: ['Screechawa', 'Screechawa', 'Yellawa'], coins: 110,
+      intro: 'JOIN US — us — us. THE ECHO PROVIDES — vides — vides.', winQuip: 'The echo… did not provide.' },
+    { name: 'Prospector Gus', avatar: '⛏️', team: ['Bouldawa', 'Grumpawa'], coins: 100,
+      intro: 'Struck gold once. Struck out ever since.', winQuip: 'Even my awawas are unimpressed with me.' },
+  ],
+  oasis: [
+    { name: 'Sleepwalker Momo', avatar: '😴', team: ['Dozawa', 'Snoozerax'], coins: 150,
+      intro: 'zzz… huh? Oh. We battle now, apparently.', winQuip: 'Was that real, or…? zzz.' },
+    { name: 'Mirage Dancer Lila', avatar: '🩰', team: ['Galewa', 'Solawa', 'Fernrax'], coins: 170,
+      intro: 'Dance with my mirages, if you can tell which is real!', winQuip: 'Even mirages lose sometimes.' },
+  ],
+  summit: [
+    { name: 'Summit Sage Orin', avatar: '🧙', team: ['Cliffawa', 'Blazerax', 'Canopawa'], coins: 240,
+      intro: 'I climbed forty years for wisdom. Mostly I found awawas.', winQuip: 'Ah. The wisdom was losing gracefully.' },
+    { name: 'Scream Chaser Rae', avatar: '🌪️', team: ['Yellawa', 'Echorax', 'Galewa'], coins: 240,
+      intro: 'I chase the loudest screams on earth. You scream interesting.', winQuip: 'THAT was a scream worth chasing!' },
+  ],
 };
 
 const STARTERS = ['Pebbawa', 'Sunnyrax', 'Sproutawa'];
@@ -276,6 +320,8 @@ const MILESTONES = [
   { id: 'first-badge',  icon: '🥇', name: 'Trial by Fluff',   desc: 'Defeat your first Elder',           check: s => Object.keys(s.badges).length >= 1, reward: { items: { 'Snack': 3 } } },
   { id: 'all-badges',   icon: '👑', name: 'Elder of Elders',  desc: 'Earn all 5 badges',                 check: s => Object.keys(s.badges).length >= 5, reward: { coins: 300 } },
   { id: 'wanderer',     icon: '👣', name: 'Wanderer',         desc: 'Take 100 exploration steps',        check: s => s.stats.steps >= 100, reward: { coins: 40 } },
+  { id: 'trainer-5',    icon: '🤝', name: 'Rival Rumble',     desc: 'Defeat 5 trainers',                 check: s => s.stats.trainerWins >= 5, reward: { coins: 100 } },
+  { id: 'trainer-20',   icon: '🏵️', name: 'People Person',    desc: 'Defeat 20 trainers',                check: s => s.stats.trainerWins >= 20, reward: { coins: 250, items: { 'Comfy Blanket': 1 } } },
   { id: 'level-30',     icon: '📈', name: 'Personal Trainer', desc: 'Raise an awawa to level 30',        check: s => s.party.some(m => m.level >= 30), reward: { coins: 100 } },
   { id: 'full-party',   icon: '🎒', name: 'Full House',       desc: 'Have 6 awawas in your party',       check: s => s.party.length >= 6, reward: { items: { 'Big Snack': 1 } } },
 ];

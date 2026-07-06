@@ -58,6 +58,8 @@ the way, so there's always a near-term goal ticking toward completion.
 | **Elder Trials** | One boss per zone (boosted stats, full endgame moveset, no catching/fleeing). First win → badge + big reward; rematches pay smaller purses. All 5 badges + summit win → ending screen. |
 | **Milestones** | 13 auto-claiming achievements in the Journal, from "First Friend" to "Awadex Master". |
 | **Golden awawas** | 1-in-40 wild encounters are gilded shinies — triple coins if defeated, a permanent ✨ Awadex marker if caught. |
+| **Trainers** | 10 wandering rivals (2 per zone) with themed 2–3 awawa teams and personality quips. No catching, no running; XP per knockout, a coin purse on victory, and their own milestones. |
+| **Held charms** | 8 equippable items (one per awawa): +25% to a chosen type's moves, 15% crit chance, or 6% HP regen per round. Bought in the shop, managed from the Party screen. |
 | **Economy** | Coins from battles & exploration → shop (catch items, snacks). |
 | **Zones** | 5 zones with distinct palettes, encounter tables and level ranges; unlock the next zone by beating the previous Elder (or out-leveling it). |
 | **Juice** | Animated HP bars, floating damage numbers, hit shakes, badge pop, screen transitions, synthesized "awawawa" cries, and a generative chiptune soundtrack with a distinct theme per zone plus battle/boss themes (WebAudio, toggleable). |
