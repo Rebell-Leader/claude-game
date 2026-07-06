@@ -5,16 +5,24 @@
 const Battle = {
   cur: null,
 
-  start(playerMon, wildMon) {
+  start(playerMon, wildMon, opts = {}) {
     this.cur = {
       player: playerMon,
       enemy: wildMon,
+      elder: opts.elder || null,     // elder definition when this is a boss trial
+      elderZone: opts.elderZone || null,
       stages: { player: { atk: 0, def: 0 }, enemy: { atk: 0, def: 0 } },
       over: false,
       result: null, // 'win' | 'caught' | 'fled' | 'lose'
     };
     Game.markDex(wildMon.species, false);
     return this.cur;
+  },
+
+  enemyLabel() {
+    const b = this.cur;
+    if (b.elder) return b.elder.name;
+    return (b.enemy.golden ? '✨ Golden ' : 'Wild ') + b.enemy.species;
   },
 
   stageMult(stage) {
@@ -54,8 +62,8 @@ const Battle = {
     const foeSide = side === 'player' ? 'enemy' : 'player';
     const foe = b[foeSide];
     const move = MOVES[moveName];
-    const name = side === 'player' ? Game.displayName(mon) : 'Wild ' + mon.species;
-    const foeName = foeSide === 'player' ? Game.displayName(foe) : 'Wild ' + foe.species;
+    const name = side === 'player' ? Game.displayName(mon) : this.enemyLabel();
+    const foeName = foeSide === 'player' ? Game.displayName(foe) : this.enemyLabel();
 
     if (Math.random() * 100 > move.acc) {
       events.push({ t: 'msg', text: `${name} used ${moveName}… but it missed!` });
@@ -128,11 +136,30 @@ const Battle = {
     if (b.enemy.hp <= 0) {
       b.over = true;
       b.result = 'win';
-      const xp = Game.xpReward(b.enemy);
-      const coins = 5 + Math.floor(b.enemy.level * 1.8) + Math.floor(Math.random() * 6);
-      Game.state.coins += coins;
       Game.state.stats.battles += 1;
-      events.push({ t: 'msg', text: `You won! +${coins} coins.` });
+      let xp = Game.xpReward(b.enemy);
+      if (b.elder) {
+        xp = Math.floor(xp * 1.5);
+        const firstWin = !Game.state.badges[b.elderZone];
+        if (firstWin) {
+          Game.state.badges[b.elderZone] = true;
+          Game.state.coins += b.elder.reward.coins;
+          for (const [name, n] of Object.entries(b.elder.reward.items || {})) Game.addItem(name, n);
+          const itemList = Object.entries(b.elder.reward.items || {}).map(([n, c]) => `${c}× ${n}`).join(', ');
+          events.push({ t: 'badge', zone: b.elderZone });
+          events.push({ t: 'msg', text: b.elder.win });
+          events.push({ t: 'msg', text: `You earned the ${b.elder.icon} ${b.elder.badge}, ${b.elder.reward.coins} coins${itemList ? ' and ' + itemList : ''}!` });
+        } else {
+          const coins = Math.floor(b.elder.reward.coins / 4);
+          Game.state.coins += coins;
+          events.push({ t: 'msg', text: `${b.elder.name} concedes the rematch. +${coins} coins.` });
+        }
+      } else {
+        let coins = 5 + Math.floor(b.enemy.level * 1.8) + Math.floor(Math.random() * 6);
+        if (b.enemy.golden) coins *= 3;
+        Game.state.coins += coins;
+        events.push({ t: 'msg', text: `You won! +${coins} coins.${b.enemy.golden ? ' The golden awawa left extra shiny ones.' : ''}` });
+      }
       this.applyXp(events, xp);
       return true;
     }
@@ -195,6 +222,10 @@ const Battle = {
     const b = this.cur;
     const events = [];
     const item = ITEMS[itemName];
+    if (b.elder) {
+      events.push({ t: 'msg', text: `${b.elder.name} raises an eyebrow. You cannot catch an Elder.` });
+      return events;
+    }
     if (!Game.useItem(itemName)) {
       events.push({ t: 'msg', text: `No ${itemName} left!` });
       return events;
@@ -208,10 +239,10 @@ const Battle = {
     if (shakes === 3) {
       b.over = true;
       b.result = 'caught';
-      Game.markDex(b.enemy.species, true);
+      Game.markDex(b.enemy.species, true, b.enemy.golden);
       Game.state.stats.catches += 1;
       events.push({ t: 'caught', species: b.enemy.species });
-      events.push({ t: 'msg', text: `Gotcha! ${b.enemy.species} was caught!` });
+      events.push({ t: 'msg', text: `Gotcha! ${b.enemy.golden ? '✨ Golden ' : ''}${b.enemy.species} was caught!` });
       if (Game.addToParty(b.enemy)) {
         events.push({ t: 'msg', text: `${b.enemy.species} joined your party!` });
       } else {
@@ -269,6 +300,10 @@ const Battle = {
   flee() {
     const b = this.cur;
     const events = [];
+    if (b.elder) {
+      events.push({ t: 'msg', text: 'There is no running from an Elder Trial!' });
+      return events;
+    }
     const pSpd = this.effectiveStats('player').spd;
     const eSpd = this.effectiveStats('enemy').spd;
     const odds = Math.min(0.95, 0.5 + (pSpd - eSpd) / 60 + 0.15);

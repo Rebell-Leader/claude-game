@@ -12,16 +12,19 @@ const Game = {
       coins: 60,
       items: { 'Pebble': 5, 'Snack': 2 },
       party: [this.makeAwawa(starterSpecies, 5)],
-      dex: { seen: {}, caught: {} },
+      dex: { seen: {}, caught: {}, golden: {} },
       zone: 'cliffs',
-      stats: { battles: 0, catches: 0, steps: 0 },
+      badges: {},
+      milestones: {},
+      endingSeen: false,
+      stats: { battles: 0, catches: 0, steps: 0, evolutions: 0 },
     };
     this.markDex(starterSpecies, true);
     this.save();
   },
 
   // ---- creature factory ----
-  makeAwawa(speciesName, level) {
+  makeAwawa(speciesName, level, opts = {}) {
     const sp = SPECIES[speciesName];
     const mon = {
       uid: 'a' + Math.random().toString(36).slice(2, 9),
@@ -29,10 +32,20 @@ const Game = {
       nickname: null,
       level,
       xp: 0,
+      golden: !!opts.golden,
+      boost: opts.boost || 1,
       moves: this.movesAtLevel(speciesName, level),
     };
-    mon.maxHp = this.statAt(sp.base.hp, level, true);
+    mon.maxHp = Math.floor(this.statAt(sp.base.hp, level, true) * mon.boost);
     mon.hp = mon.maxHp;
+    return mon;
+  },
+
+  makeElderMon(elder) {
+    const mon = this.makeAwawa(elder.species, elder.level, { boost: elder.boost });
+    // Elders punch slightly above their level (10-level move preview), but the
+    // first trials must stay winnable — no endgame nukes at Lv 8.
+    mon.moves = this.movesAtLevel(elder.species, elder.level + 10);
     return mon;
   },
 
@@ -48,10 +61,11 @@ const Game = {
 
   stats(mon) {
     const b = SPECIES[mon.species].base;
+    const boost = mon.boost || 1;
     return {
-      atk: this.statAt(b.atk, mon.level, false),
-      def: this.statAt(b.def, mon.level, false),
-      spd: this.statAt(b.spd, mon.level, false),
+      atk: Math.floor(this.statAt(b.atk, mon.level, false) * boost),
+      def: Math.floor(this.statAt(b.def, mon.level, false) * boost),
+      spd: Math.floor(this.statAt(b.spd, mon.level, false) * boost),
     };
   },
 
@@ -92,6 +106,7 @@ const Game = {
       if (sp.evolvesTo && mon.level >= sp.evolveLevel) {
         events.push('evolve:' + sp.evolvesTo);
         this.evolve(mon);
+        this.state.stats.evolutions += 1;
       }
     }
     return events;
@@ -121,9 +136,27 @@ const Game = {
   },
 
   // ---- dex & party ----
-  markDex(speciesName, caught) {
+  markDex(speciesName, caught, golden) {
     this.state.dex.seen[speciesName] = true;
     if (caught) this.state.dex.caught[speciesName] = true;
+    if (caught && golden) this.state.dex.golden[speciesName] = true;
+  },
+
+  // Returns milestones that just completed, applying their rewards.
+  checkMilestones() {
+    const done = [];
+    for (const m of MILESTONES) {
+      if (this.state.milestones[m.id]) continue;
+      let hit = false;
+      try { hit = m.check(this.state); } catch (e) { /* defensive: a bad check must not break saves */ }
+      if (!hit) continue;
+      this.state.milestones[m.id] = true;
+      if (m.reward.coins) this.state.coins += m.reward.coins;
+      if (m.reward.items) for (const [name, n] of Object.entries(m.reward.items)) this.addItem(name, n);
+      done.push(m);
+    }
+    if (done.length) this.save();
+    return done;
   },
 
   addToParty(mon) {
@@ -173,7 +206,7 @@ const Game = {
       if (r <= 0) {
         const [lo, hi] = zone.levels;
         const level = lo + Math.floor(Math.random() * (hi - lo + 1));
-        return this.makeAwawa(e.species, level);
+        return this.makeAwawa(e.species, level, { golden: Math.random() < 1 / 40 });
       }
     }
     return this.makeAwawa(zone.encounters[0].species, zone.levels[0]);
@@ -192,6 +225,12 @@ const Game = {
       if (!raw) return false;
       const s = JSON.parse(raw);
       if (!s || !Array.isArray(s.party) || !s.party.length) return false;
+      // Migrate saves from earlier versions of the game.
+      s.dex.golden = s.dex.golden || {};
+      s.badges = s.badges || {};
+      s.milestones = s.milestones || {};
+      s.endingSeen = !!s.endingSeen;
+      s.stats.evolutions = s.stats.evolutions || 0;
       this.state = s;
       return true;
     } catch (e) {

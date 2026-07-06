@@ -30,6 +30,17 @@ global module at `/opt/node22/lib/node_modules/playwright`).
    via `show-dex` / `show-shop` / `show-party` / `show-zones`.
 5. Persistence probe: `page.reload()` → `[data-action="continue-game"]` should
    exist and restore coins/party (localStorage key `awawa-quest-save-v1`).
+6. Elder Trial: `[data-action="elder-challenge"]` on the hub. Catch/Run are
+   disabled buttons during trials. First win grants `state.badges[zoneId]`; a
+   rematch win logs "concedes the rematch". To win the cliffs elder reliably,
+   seed a save with a Leaf attacker (type advantage vs Rock).
+7. Golden variants are 1/40 — for deterministic tests force one via
+   `page.evaluate(() => { Battle.start(Game.firstHealthy(), Game.makeAwawa('Pebbawa', 3, {golden:true})); UI.showBattle(); })`.
+8. Journal/milestones: `show-journal`; milestones auto-claim via
+   `Game.checkMilestones()` and surface as toasts. Move editor:
+   party → Info → `party-moves` → `moveedit-toggle`/`moveedit-save`.
+9. Old-save migration: writing a pre-badges save (no `badges`/`milestones`/
+   `dex.golden` keys) then Continue must not throw — `Game.load()` migrates.
 
 ## Gotchas
 

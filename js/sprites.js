@@ -5,7 +5,10 @@
 // palette, eye style, scale and one signature feature overlay.
 function awawaSVG(speciesName, opts = {}) {
   const sp = SPECIES[speciesName];
-  const s = sp.sprite;
+  // Golden (shiny) variants keep their species feature but get a gilded coat.
+  const s = opts.golden
+    ? Object.assign({}, sp.sprite, { body: '#f0c750', belly: '#fff3c9', ear: '#cf9f2a' })
+    : sp.sprite;
   const facing = opts.facing || 'right';
   const size = opts.size || 160;
   const big = s.big || 1;
@@ -94,9 +97,15 @@ function awawaSVG(speciesName, opts = {}) {
       <ellipse cx="66" cy="146" rx="13" ry="8" fill="${shade}"/>
       <ellipse cx="134" cy="146" rx="13" ry="8" fill="${shade}"/>
       ${['waves', 'megawaves', 'brow'].includes(s.feature) ? features : ''}
+      ${opts.golden ? `<g fill="#fff1b8">${star(38, 34, 7)}${star(168, 26, 6)}${star(180, 96, 5)}${star(24, 96, 5)}</g>` : ''}
     </g>
   </g>
 </svg>`;
+}
+
+// Convenience: render a specific creature instance (respects golden flag).
+function monSVG(mon, opts = {}) {
+  return awawaSVG(mon.species, Object.assign({ golden: mon.golden }, opts));
 }
 
 function star(cx, cy, r) {

@@ -38,13 +38,25 @@ const UI = {
     setTimeout(() => t.remove(), 2800);
   },
 
+  milestonesTick() {
+    if (!Game.state) return;
+    const done = Game.checkMilestones();
+    done.forEach((m, i) => {
+      setTimeout(() => {
+        Sound.fx('levelup');
+        this.toast(`${m.icon} Milestone — ${m.name}! Reward claimed.`);
+      }, 400 + i * 1500);
+    });
+  },
+
   topbar() {
     const s = Game.state;
     return `<div class="topbar">
       <span class="logo">🐹 Awawa Quest</span>
       <span class="coins">🪙 ${s ? s.coins : 0}</span>
       <span class="mini-btns">
-        <button data-action="toggle-mute">${Sound.muted ? '🔇' : '🔊'}</button>
+        <button data-action="toggle-music" title="Music">${Music.muted ? '🔕' : '🎵'}</button>
+        <button data-action="toggle-mute" title="Sound effects">${Sound.muted ? '🔇' : '🔊'}</button>
         <button data-action="go-title" title="Title screen">🏠</button>
       </span>
     </div>`;
@@ -74,6 +86,7 @@ const UI = {
     const hasSave = (() => { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } })();
     document.documentElement.style.setProperty('--zone-a', '#ffd89b');
     document.documentElement.style.setProperty('--zone-b', '#f2994a');
+    Music.play('title');
     this.render(`
       <div class="title-screen">
         <div class="hero">${awawaSVG('The Great Awawa', { size: 210 })}</div>
@@ -108,7 +121,9 @@ const UI = {
   showHub(flash) {
     const s = Game.state;
     const zone = this.currentZone();
+    const elder = ELDERS[zone.id];
     this.setZoneTheme(zone);
+    Music.play(zone.id);
     this.render(`
       ${this.topbar()}
       <div class="panel zone-banner">
@@ -119,20 +134,27 @@ const UI = {
           <button class="primary big" data-action="explore">👣 Explore</button>
         </div>
         <p class="muted">Wild awawas: Lv ${zone.levels[0]}–${zone.levels[1]}</p>
+        ${elder ? `<button class="elder-btn ${s.badges[zone.id] ? 'earned' : ''}" data-action="elder-challenge">
+          ⚔️ Elder Trial — ${elder.name} (Lv ${elder.level}) ${s.badges[zone.id] ? elder.icon + ' ✓' : ''}
+        </button>` : ''}
       </div>
       <div class="panel">
         <div class="hub-nav">
           <button data-action="show-zones"><span class="ico">🗺️</span>Travel</button>
           <button data-action="show-party"><span class="ico">🎒</span>Party</button>
           <button data-action="show-dex"><span class="ico">📔</span>Awadex</button>
+          <button data-action="show-journal"><span class="ico">📖</span>Journal</button>
           <button data-action="show-shop"><span class="ico">🛒</span>Shop</button>
           <button data-action="rest"><span class="ico">🛏️</span>Rest</button>
+        </div>
+        <div class="badge-row" title="Badges">
+          ${ZONES.map(z => `<span class="badge-slot ${s.badges[z.id] ? 'earned' : ''}">${s.badges[z.id] ? ELDERS[z.id].icon : '◽'}</span>`).join('')}
         </div>
         <div class="party-strip">
           ${s.party.map(m => `
             <div class="party-slot ${m.hp <= 0 ? 'fainted' : ''}">
-              ${awawaSVG(m.species, { size: 56 })}
-              <div>${this.esc(Game.displayName(m)).slice(0, 10)}</div>
+              ${monSVG(m, { size: 56 })}
+              <div>${m.golden ? '✨' : ''}${this.esc(Game.displayName(m)).slice(0, 10)}</div>
               <div class="lv">Lv ${m.level} · ${m.hp}/${m.maxHp}</div>
             </div>`).join('')}
         </div>
@@ -140,18 +162,54 @@ const UI = {
   },
 
   showZones() {
+    const s = Game.state;
     const maxLv = Game.highestLevel();
     this.render(`
       ${this.topbar()}
       <div class="back-row"><button data-action="go-hub">← Back</button></div>
-      <div class="panel"><h2>🗺️ Travel</h2><p class="muted">Higher zones need a stronger party.</p></div>
-      ${ZONES.map(z => {
-        const locked = maxLv < z.minLevel;
+      <div class="panel"><h2>🗺️ Travel</h2><p class="muted">Beat a zone's Elder to unlock the next one (a strong enough party also works).</p></div>
+      ${ZONES.map((z, i) => {
+        const prevBadge = i === 0 || s.badges[ZONES[i - 1].id];
+        const locked = !(prevBadge || maxLv >= z.minLevel);
         return `<div class="zone-card ${locked ? 'locked' : ''}" ${locked ? '' : `data-action="travel" data-arg="${z.id}"`}
             style="background:linear-gradient(120deg, ${z.palette[0]}, ${z.palette[1]})">
-          <div class="zc-name">${z.icon} ${z.name}</div>
+          <div class="zc-name">${z.icon} ${z.name} ${s.badges[z.id] ? ELDERS[z.id].icon : ''}</div>
           <div class="zc-sub">${z.blurb}</div>
-          <div class="zc-badge">${locked ? `🔒 needs Lv ${z.minLevel}` : `Lv ${z.levels[0]}–${z.levels[1]}`}</div>
+          <div class="zc-badge">${locked ? `🔒 beat ${ELDERS[ZONES[i - 1].id].name.split(' ')[0]} or reach Lv ${z.minLevel}` : `Lv ${z.levels[0]}–${z.levels[1]}`}</div>
+        </div>`;
+      }).join('')}`);
+  },
+
+  showJournal() {
+    const s = Game.state;
+    const doneCount = Object.keys(s.milestones).length;
+    this.render(`
+      ${this.topbar()}
+      <div class="back-row"><button data-action="go-hub">← Back</button></div>
+      <div class="panel"><h2>📖 Journal</h2>
+        <p class="muted">Milestones ${doneCount}/${MILESTONES.length} · Badges ${Object.keys(s.badges).length}/5 · Battles won ${s.stats.battles} · Catches ${s.stats.catches} · Steps ${s.stats.steps}</p>
+      </div>
+      <div class="panel">
+        <h3 style="margin-bottom:8px">🏅 Badges</h3>
+        <div class="badge-row big-badges">
+          ${ZONES.map(z => {
+            const e = ELDERS[z.id];
+            return `<span class="badge-slot ${s.badges[z.id] ? 'earned' : ''}" title="${e.badge}">${s.badges[z.id] ? e.icon : '◽'}</span>`;
+          }).join('')}
+        </div>
+      </div>
+      ${MILESTONES.map(m => {
+        const done = !!s.milestones[m.id];
+        const rewardText = [
+          m.reward.coins ? `🪙 ${m.reward.coins}` : '',
+          ...Object.entries(m.reward.items || {}).map(([n, c]) => `${c}× ${n}`),
+        ].filter(Boolean).join(', ');
+        return `<div class="list-row ${done ? 'ms-done' : ''}">
+          <div style="font-size:1.6rem">${done ? m.icon : '🔒'}</div>
+          <div class="grow">
+            <div class="nm">${m.name} ${done ? '✅' : ''}</div>
+            <div class="sub">${m.desc} — reward: ${rewardText}</div>
+          </div>
         </div>`;
       }).join('')}`);
   },
@@ -170,11 +228,15 @@ const UI = {
         const st = Game.stats(m);
         const sel = selectedIdx === i;
         return `<div class="list-row ${sel ? 'selected' : ''}">
-          <div>${awawaSVG(m.species, { size: 64 })}</div>
+          <div>${monSVG(m, { size: 64 })}</div>
           <div class="grow">
-            <div class="nm">${this.esc(Game.displayName(m))} <span class="muted">Lv ${m.level}</span> ${this.chip(sp.type)}</div>
+            <div class="nm">${m.golden ? '✨' : ''}${this.esc(Game.displayName(m))} <span class="muted">Lv ${m.level}</span> ${this.chip(sp.type)}</div>
             ${this.hpBarHtml(m, true)}
-            ${sel ? `<div class="sub" style="margin-top:4px">ATK ${st.atk} · DEF ${st.def} · SPD ${st.spd}<br>Moves: ${m.moves.join(', ')}</div>` : ''}
+            ${sel ? `<div class="sub" style="margin-top:4px">ATK ${st.atk} · DEF ${st.def} · SPD ${st.spd}<br>Moves: ${m.moves.join(', ')}</div>
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button data-action="party-name" data-arg="${i}">✏️ Name</button>
+              <button data-action="party-moves" data-arg="${i}">📖 Moves</button>
+            </div>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;gap:4px">
             <button data-action="party-detail" data-arg="${i}">${sel ? 'Hide' : 'Info'}</button>
@@ -186,6 +248,40 @@ const UI = {
       }).join('')}`);
   },
 
+  availableMoves(mon) {
+    const fromLearnset = SPECIES[mon.species].learnset.filter(e => e.lvl <= mon.level).map(e => e.move);
+    return [...new Set([...mon.moves, ...fromLearnset])];
+  },
+
+  showMoveEditor(idx) {
+    const mon = Game.state.party[idx];
+    if (!mon) return this.showParty();
+    if (!this._moveSel) this._moveSel = [...mon.moves];
+    const avail = this.availableMoves(mon);
+    this.render(`
+      ${this.topbar()}
+      <div class="back-row"><button data-action="party-moves-cancel">← Cancel</button></div>
+      <div class="panel">
+        <h2>📖 ${this.esc(Game.displayName(mon))}'s Moves</h2>
+        <p class="muted">Pick 1–4 moves it should know. Everything it has ever learned stays available here.</p>
+      </div>
+      ${avail.map(mv => {
+        const m = MOVES[mv];
+        const on = this._moveSel.includes(mv);
+        return `<div class="list-row mv-toggle ${on ? 'selected' : ''}" data-action="moveedit-toggle" data-arg="${mv}">
+          <div style="font-size:1.4rem">${TYPES[m.type].icon}</div>
+          <div class="grow">
+            <div class="nm">${mv} ${this.chip(m.type)}</div>
+            <div class="sub">${m.power > 0 ? 'PWR ' + m.power : 'Status'} · ACC ${m.acc} — ${m.flavor}</div>
+          </div>
+          <div style="font-size:1.3rem">${on ? '✅' : '⬜'}</div>
+        </div>`;
+      }).join('')}
+      <div style="text-align:center;margin-top:10px">
+        <button class="primary big" data-action="moveedit-save" data-arg="${idx}" ${this._moveSel.length < 1 ? 'disabled' : ''}>Save (${this._moveSel.length}/4)</button>
+      </div>`);
+  },
+
   showDex(detailName) {
     const s = Game.state;
     const names = Object.keys(SPECIES).sort((a, b) => SPECIES[a].dex - SPECIES[b].dex);
@@ -194,10 +290,12 @@ const UI = {
     if (detailName && s.dex.seen[detailName]) {
       const sp = SPECIES[detailName];
       const caught = s.dex.caught[detailName];
+      const golden = s.dex.golden[detailName];
       detail = `<div class="panel dex-detail">
-        ${awawaSVG(detailName, { size: 130 })}
+        ${awawaSVG(detailName, { size: 130, golden })}
         <h2>#${String(sp.dex).padStart(2, '0')} ${detailName}</h2>
         ${this.chip(sp.type)} ${sp.legendary ? '<span class="chip" style="background:#c9a227">⭐ Legendary</span>' : ''}
+        ${golden ? '<span class="chip" style="background:#d4af37">✨ Golden caught</span>' : ''}
         <p class="desc">${caught ? sp.desc : 'Catch one to learn more…'}</p>
         ${caught ? `<p class="muted">Base — HP ${sp.base.hp} · ATK ${sp.base.atk} · DEF ${sp.base.def} · SPD ${sp.base.spd}</p>` : ''}
       </div>`;
@@ -205,7 +303,7 @@ const UI = {
     this.render(`
       ${this.topbar()}
       <div class="back-row"><button data-action="go-hub">← Back</button></div>
-      <div class="panel"><h2>📔 Awadex</h2><p class="muted">Caught ${caughtCount} / ${names.length} · Battles won: ${s.stats.battles} · Steps: ${s.stats.steps}</p></div>
+      <div class="panel"><h2>📔 Awadex</h2><p class="muted">Caught ${caughtCount} / ${names.length} · ✨ Golden ${Object.keys(s.dex.golden).length}</p></div>
       ${detail}
       <div class="dex-grid">
         ${names.map(n => {
@@ -213,7 +311,7 @@ const UI = {
           const cls = !seen ? 'unseen' : (caught ? '' : 'seen-only');
           return `<div class="dex-card ${cls}" ${seen ? `data-action="dex-detail" data-arg="${n}"` : ''}>
             ${awawaSVG(n, { size: 74 })}
-            <div class="num">#${String(SPECIES[n].dex).padStart(2, '0')}</div>
+            <div class="num">#${String(SPECIES[n].dex).padStart(2, '0')} ${s.dex.golden[n] ? '✨' : ''}</div>
             <div>${seen ? n : '???'}</div>
           </div>`;
         }).join('')}
@@ -237,20 +335,44 @@ const UI = {
         </div>`).join('')}`);
   },
 
+  showEnding() {
+    const s = Game.state;
+    Music.play('title');
+    this.render(`
+      ${this.topbar()}
+      <div class="panel ending-panel">
+        <div class="hero">${awawaSVG('The Great Awawa', { size: 180 })}</div>
+        <h1>🏆 AWAWAWAWA!</h1>
+        <p style="font-weight:700;margin:10px 0">You defeated THE GREAT AWAWA and earned every badge.
+        From this day, the colonies scream your name at dawn.</p>
+        <p class="muted">Battles won: ${s.stats.battles} · Species caught: ${Object.keys(s.dex.caught).length}/18 ·
+        Golden found: ${Object.keys(s.dex.golden).length} · Steps: ${s.stats.steps}</p>
+        <div class="party-strip" style="margin:14px 0">
+          ${s.party.map(m => `<div class="party-slot">${monSVG(m, { size: 56 })}<div>${this.esc(Game.displayName(m)).slice(0, 10)}</div><div class="lv">Lv ${m.level}</div></div>`).join('')}
+        </div>
+        <p class="muted">The world stays open — golden awawas and a complete Awadex still await.</p>
+        <button class="primary big" data-action="go-hub" style="margin-top:10px">Keep playing ➜</button>
+      </div>`);
+  },
+
   // ---------- battle ----------
   showBattle() {
     const b = Battle.cur;
     const zone = this.currentZone();
     this.setZoneTheme(zone);
+    Music.play(b.elder ? 'boss' : 'battle');
+    const introLine = b.elder
+      ? `<p><i>${b.elder.intro}</i></p><p><b>${b.elder.name}</b> (Lv ${b.enemy.level}) challenges you!</p>`
+      : `<p>A ${b.enemy.golden ? '<b>✨ golden</b> ' : 'wild '}<b>${b.enemy.species}</b> (Lv ${b.enemy.level}) appeared!</p>`;
     this.render(`
       ${this.topbar()}
       <div class="battle-stage">
-        <div class="combatant enemy"><div class="sprite" id="enemy-sprite">${awawaSVG(b.enemy.species, { facing: 'left', size: 130 })}</div></div>
-        <div class="combatant player"><div class="sprite" id="player-sprite">${awawaSVG(b.player.species, { size: 150 })}</div></div>
+        <div class="combatant enemy"><div class="sprite" id="enemy-sprite">${monSVG(b.enemy, { facing: 'left', size: b.elder ? 150 : 130 })}</div></div>
+        <div class="combatant player"><div class="sprite" id="player-sprite">${monSVG(b.player, { size: 150 })}</div></div>
         <div class="statbox statbox-pos-enemy" id="enemy-box"></div>
         <div class="statbox statbox-pos-player" id="player-box"></div>
       </div>
-      <div class="battle-log" id="battle-log"><p>A wild <b>${b.enemy.species}</b> (Lv ${b.enemy.level}) appeared!</p></div>
+      <div class="battle-log" id="battle-log">${introLine}</div>
       <div id="battle-actions"></div>`);
     this.updateStatboxes();
     this.renderBattleActions('main');
@@ -262,7 +384,8 @@ const UI = {
     if (!b) return;
     const eBox = document.getElementById('enemy-box');
     const pBox = document.getElementById('player-box');
-    if (eBox) eBox.innerHTML = `<div class="row1"><span>${b.enemy.species}</span><span>Lv ${b.enemy.level}</span></div>${this.hpBarHtml(b.enemy)}`;
+    const eName = b.elder ? `👑 ${b.elder.name}` : `${b.enemy.golden ? '✨ ' : ''}${b.enemy.species}`;
+    if (eBox) eBox.innerHTML = `<div class="row1"><span>${eName}</span><span>Lv ${b.enemy.level}</span></div>${this.hpBarHtml(b.enemy)}`;
     if (pBox) pBox.innerHTML = `<div class="row1"><span>${this.esc(Game.displayName(b.player))}</span><span>Lv ${b.player.level}</span></div>${this.hpBarHtml(b.player, true)}`;
   },
 
@@ -287,10 +410,15 @@ const UI = {
           }).join('')}
         </div>
         <div class="action-row">
-          <button data-action="battle-menu" data-arg="catch">🪨 Catch</button>
-          <button data-action="battle-menu" data-arg="snack">🥕 Snack</button>
-          <button data-action="battle-menu" data-arg="switch">🔄 Switch</button>
-          <button data-action="battle-flee">🏃 Run</button>
+          ${b.elder
+            ? `<button data-action="battle-menu" data-arg="snack">🥕 Snack</button>
+               <button data-action="battle-menu" data-arg="switch">🔄 Switch</button>
+               <button disabled title="Elders cannot be caught">🪨 —</button>
+               <button disabled title="No running from an Elder Trial">🏃 —</button>`
+            : `<button data-action="battle-menu" data-arg="catch">🪨 Catch</button>
+               <button data-action="battle-menu" data-arg="snack">🥕 Snack</button>
+               <button data-action="battle-menu" data-arg="switch">🔄 Switch</button>
+               <button data-action="battle-flee">🏃 Run</button>`}
         </div>`;
     } else if (mode === 'catch') {
       const opts = Object.entries(ITEMS).filter(([n, it]) => it.ballBonus && Game.state.items[n]);
@@ -321,7 +449,7 @@ const UI = {
         <div class="action-grid">
           ${options.length ? options.map(({ m, i }) =>
             `<button data-action="battle-switch" data-arg="${i}" data-free="${forced ? 1 : 0}">
-              ${SPECIES[m.species].sprite ? TYPES[SPECIES[m.species].type].icon : ''} ${this.esc(Game.displayName(m))}
+              ${TYPES[SPECIES[m.species].type].icon} ${this.esc(Game.displayName(m))}
               <span class="mv-meta">Lv ${m.level} · ${m.hp}/${m.maxHp} HP</span></button>`
           ).join('') : '<p class="muted" style="grid-column:1/-1;text-align:center">Nobody else can fight!</p>'}
         </div>
@@ -333,7 +461,7 @@ const UI = {
     const el = document.getElementById('battle-log');
     if (!el) return;
     const p = document.createElement('p');
-    p.innerHTML = text;
+    p.textContent = text;
     el.appendChild(p);
     el.scrollTop = el.scrollHeight;
   },
@@ -346,6 +474,19 @@ const UI = {
     if (!el) return Promise.resolve();
     el.classList.add(cls);
     return this.delay(ms).then(() => el.classList.remove(cls));
+  },
+
+  spawnDmgFloat(targetSide, dmg, eff, crit) {
+    const stage = document.querySelector('.battle-stage');
+    if (!stage) return;
+    const d = document.createElement('div');
+    d.className = 'dmg-float' + (eff > 1 || crit ? ' super' : eff < 1 ? ' weak' : '');
+    d.textContent = (crit ? '💥' : '') + '-' + dmg;
+    const jx = Math.floor(Math.random() * 30) - 15;
+    if (targetSide === 'enemy') { d.style.right = (70 - jx) + 'px'; d.style.top = '52px'; }
+    else { d.style.left = (85 + jx) + 'px'; d.style.bottom = '150px'; }
+    stage.appendChild(d);
+    setTimeout(() => d.remove(), 950);
   },
 
   async playEvents(events) {
@@ -362,6 +503,7 @@ const UI = {
           break;
         case 'attack': {
           Sound.fx(ev.eff > 1 ? 'superhit' : 'hit');
+          this.spawnDmgFloat(ev.target, ev.dmg, ev.eff, ev.crit);
           await this.animate(this.spriteEl(ev.target), 'hit', 420);
           this.updateStatboxes();
           break;
@@ -381,11 +523,24 @@ const UI = {
           this.updateStatboxes();
           await this.delay(400);
           break;
+        case 'badge': {
+          const stage = document.querySelector('.battle-stage');
+          if (stage) {
+            const el = document.createElement('div');
+            el.className = 'badge-pop';
+            el.textContent = ELDERS[ev.zone].icon;
+            stage.appendChild(el);
+            Sound.fx('catch');
+            await this.delay(1300);
+            el.remove();
+          }
+          break;
+        }
         case 'evolve': {
           Sound.fx('evolve');
           const el = this.spriteEl('player');
           await this.animate(el, 'evolve-anim', 1400);
-          if (el) el.innerHTML = awawaSVG(ev.to, { size: 150 });
+          if (el) el.innerHTML = monSVG(Battle.cur.player, { size: 150 });
           el && el.classList.remove('faint-anim');
           Sound.cry(ev.to);
           this.updateStatboxes();
@@ -396,7 +551,7 @@ const UI = {
           const el = this.spriteEl('player');
           if (el) {
             el.classList.remove('faint-anim');
-            el.innerHTML = awawaSVG(ev.species, { size: 150 });
+            el.innerHTML = monSVG(Battle.cur.player, { size: 150 });
             el.classList.add('appear-anim');
             setTimeout(() => el.classList.remove('appear-anim'), 500);
           }
@@ -439,10 +594,13 @@ const UI = {
     this.busy = false;
     Game.save();
     this.renderBattleActions(needSwitch ? 'forced-switch' : 'main');
+    if (Battle.cur && Battle.cur.over) this.milestonesTick();
   },
 
   endBattle() {
-    const result = Battle.cur ? Battle.cur.result : null;
+    const b = Battle.cur;
+    const result = b ? b.result : null;
+    const elderZone = b ? b.elderZone : null;
     Battle.cur = null;
     if (result === 'lose') {
       const lost = Math.floor(Game.state.coins / 2);
@@ -450,6 +608,10 @@ const UI = {
       Game.healParty();
       Game.save();
       this.showHub(`😵 You blacked out and woke at the resting rock. Lost 🪙 ${lost}. Party healed.`);
+    } else if (result === 'win' && elderZone === 'summit' && !Game.state.endingSeen) {
+      Game.state.endingSeen = true;
+      Game.save();
+      this.showEnding();
     } else {
       Game.save();
       this.showHub();
@@ -510,6 +672,11 @@ const UI = {
         el.textContent = Sound.muted ? '🔇' : '🔊';
         break;
       }
+      case 'toggle-music': {
+        Music.toggle();
+        el.textContent = Music.muted ? '🔕' : '🎵';
+        break;
+      }
       case 'go-title': this.showTitle(); break;
       case 'new-game': this.showStarterPick_orConfirm(); break;
       case 'continue-game':
@@ -530,6 +697,17 @@ const UI = {
       }
       case 'go-hub': this.showHub(); break;
       case 'explore': Sound.fx('click'); this.explore(); break;
+      case 'elder-challenge': {
+        const zone = this.currentZone();
+        const elder = ELDERS[zone.id];
+        const lead = Game.firstHealthy();
+        if (!elder) break;
+        if (!lead) { this.toast('Your whole party has fainted! Rest first.'); break; }
+        Battle.start(lead, Game.makeElderMon(elder), { elder, elderZone: zone.id });
+        Game.save();
+        this.showBattle();
+        break;
+      }
       case 'rest':
         Game.healParty();
         Sound.fx('heal');
@@ -545,12 +723,47 @@ const UI = {
         break;
       }
       case 'show-party': this.showParty(); break;
+      case 'show-journal': this.showJournal(); break;
       case 'party-detail': this.showParty(this._partySel === +arg ? (this._partySel = undefined) : (this._partySel = +arg)); break;
       case 'party-lead': {
         const [mon] = s.party.splice(+arg, 1);
         s.party.unshift(mon);
         Game.save();
         this.showParty(0);
+        break;
+      }
+      case 'party-name': {
+        const mon = s.party[+arg];
+        if (!mon) break;
+        const raw = prompt(`Nickname for ${mon.species}? (letters/numbers, max 12; empty resets)`, mon.nickname || '');
+        if (raw !== null) {
+          const clean = raw.replace(/[^A-Za-z0-9 \-']/g, '').trim().slice(0, 12);
+          mon.nickname = clean || null;
+          Game.save();
+        }
+        this.showParty(+arg);
+        break;
+      }
+      case 'party-moves': this._moveSel = null; this.showMoveEditor(+arg); break;
+      case 'party-moves-cancel': this._moveSel = null; this.showParty(); break;
+      case 'moveedit-toggle': {
+        const editIdx = +document.querySelector('[data-action="moveedit-save"]').dataset.arg;
+        const i = this._moveSel.indexOf(arg);
+        if (i >= 0) this._moveSel.splice(i, 1);
+        else if (this._moveSel.length < 4) this._moveSel.push(arg);
+        else this.toast('Max 4 moves — deselect one first.');
+        this.showMoveEditor(editIdx);
+        break;
+      }
+      case 'moveedit-save': {
+        const mon = s.party[+arg];
+        if (mon && this._moveSel && this._moveSel.length >= 1) {
+          mon.moves = [...this._moveSel];
+          Game.save();
+          this.toast('Moves updated!');
+        }
+        this._moveSel = null;
+        this.showParty(+arg);
         break;
       }
       case 'party-snack': {
@@ -600,6 +813,10 @@ const UI = {
       }
       case 'battle-flee': this.playEvents(Battle.flee()); break;
       case 'battle-end': this.endBattle(); break;
+    }
+    // Non-battle actions can complete milestones (full party, travel steps…).
+    if (Game.state && !action.startsWith('battle-') && action !== 'explore' && action !== 'elder-challenge') {
+      this.milestonesTick();
     }
   },
 

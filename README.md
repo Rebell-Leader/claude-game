@@ -36,8 +36,14 @@ an item, coins, or flavor. Battles are short (4 moves, type triangle) so the loo
 stays snappy.
 
 **Session-to-session:** progress is auto-saved to `localStorage`. Long-term goals:
-complete all 18 Awadex entries, evolve every line, reach the level-gated
-Great Rock Summit and catch the two legendaries.
+complete all 18 Awadex entries, evolve every line, hunt ✨ golden variants, and
+climb the badge ladder to the finale.
+
+**The arc:** every zone is guarded by an **Elder** — a boss trial you can't flee
+or catch. Beating an Elder earns a badge (and unlocks the next zone). The fifth
+trial is THE GREAT AWAWA itself; defeating it rolls the ending. **Milestones**
+(catch 5 species, evolve one, win 50 battles…) auto-pay coins and items along
+the way, so there's always a near-term goal ticking toward completion.
 
 ## Systems
 
@@ -48,9 +54,13 @@ Great Rock Summit and catch the two legendaries.
 | **Battle** | Turn-based, speed decides order, 4-move slots, stat stages (attack/defense buffs & debuffs), healing and drain moves. |
 | **Catching** | Throw Pebbles / Smooth Stones / Comfy Blankets. Catch odds scale with remaining HP and species rarity. |
 | **Growth** | Classic stat curves, XP from battles, level-up move learning, level-triggered evolution. |
+| **Growth (cont.)** | Move editor: recompose any party member's 4-move set from everything it has ever learned. Nicknames too. |
+| **Elder Trials** | One boss per zone (boosted stats, full endgame moveset, no catching/fleeing). First win → badge + big reward; rematches pay smaller purses. All 5 badges + summit win → ending screen. |
+| **Milestones** | 13 auto-claiming achievements in the Journal, from "First Friend" to "Awadex Master". |
+| **Golden awawas** | 1-in-40 wild encounters are gilded shinies — triple coins if defeated, a permanent ✨ Awadex marker if caught. |
 | **Economy** | Coins from battles & exploration → shop (catch items, snacks). |
-| **Zones** | 5 zones with distinct palettes, encounter tables and level ranges; the last two are gated by party level. |
-| **Juice** | Animated HP bars, hit shakes, screen transitions, synthesized "awawawa" cries via WebAudio. |
+| **Zones** | 5 zones with distinct palettes, encounter tables and level ranges; unlock the next zone by beating the previous Elder (or out-leveling it). |
+| **Juice** | Animated HP bars, floating damage numbers, hit shakes, badge pop, screen transitions, synthesized "awawawa" cries, and a generative chiptune soundtrack with a distinct theme per zone plus battle/boss themes (WebAudio, toggleable). |
 
 ## Play
 

@@ -227,3 +227,55 @@ const ITEMS = {
 };
 
 const STARTERS = ['Pebbawa', 'Sunnyrax', 'Sproutawa'];
+
+// Each zone has a guardian Elder — a boss trial. Beating it earns a badge,
+// which is the intended way to unlock the next zone (high level also works).
+const ELDERS = {
+  cliffs: {
+    name: 'Boulder the Unmoved', species: 'Grumpawa', level: 8, boost: 1.12,
+    badge: 'Cliff Badge', icon: '🥌', reward: { coins: 120, items: { 'Smooth Stone': 3 } },
+    intro: 'The old guardian of the cliffs blinks slowly. It is not impressed. Yet.',
+    win: 'Boulder nods, once. Legend says that means "well done".',
+  },
+  meadow: {
+    name: 'Whisperwind', species: 'Galewa', level: 14, boost: 1.12,
+    badge: 'Breeze Badge', icon: '🍃', reward: { coins: 200, items: { 'Comfy Blanket': 1, 'Snack': 2 } },
+    intro: 'A blur circles you three times before sitting down. "Catch me if you can," it whistles.',
+    win: 'Whisperwind bows mid-backflip. The meadow applauds in rustles.',
+  },
+  canyon: {
+    name: 'The Echo of Echoes', species: 'Echorax', level: 20, boost: 1.15,
+    badge: 'Echo Badge', icon: '📣', reward: { coins: 300, items: { 'Comfy Blanket': 1, 'Big Snack': 1 } },
+    intro: '"WHO DARES…" — dares — dares — the canyon itself asks the question.',
+    win: 'For the first time in centuries, the canyon is silent. Then: distant, approving awawas.',
+  },
+  oasis: {
+    name: 'Auntie Slumber', species: 'Snoozerax', level: 27, boost: 1.15,
+    badge: 'Dream Badge', icon: '🌙', reward: { coins: 450, items: { 'Comfy Blanket': 2 } },
+    intro: 'The huge awawa does not open her eyes. "I will fight you," she yawns, "horizontally."',
+    win: 'Auntie Slumber smiles in her sleep and dreams a badge into your hand.',
+  },
+  summit: {
+    name: 'THE GREAT AWAWA', species: 'The Great Awawa', level: 34, boost: 1.2,
+    badge: 'Scream Badge', icon: '👑', reward: { coins: 1000, items: { 'Comfy Blanket': 3 } }, final: true,
+    intro: 'The First Scream itself descends from the peak. Every hyrax on earth goes quiet to listen.',
+    win: 'THE GREAT AWAWA screams your name across every cliff in the world. You are legend now.',
+  },
+};
+
+// Milestones auto-complete and pay out the moment their condition is met.
+const MILESTONES = [
+  { id: 'first-catch',  icon: '🪨', name: 'First Friend',     desc: 'Catch your first awawa',            check: s => s.stats.catches >= 1, reward: { coins: 30 } },
+  { id: 'collector-5',  icon: '📔', name: 'Collector',        desc: 'Catch 5 different species',         check: s => Object.keys(s.dex.caught).length >= 5, reward: { coins: 60, items: { 'Smooth Stone': 2 } } },
+  { id: 'collector-10', icon: '📚', name: 'Curator',          desc: 'Catch 10 different species',        check: s => Object.keys(s.dex.caught).length >= 10, reward: { coins: 150, items: { 'Comfy Blanket': 1 } } },
+  { id: 'dex-complete', icon: '🏆', name: 'Awadex Master',    desc: 'Catch all 18 species',              check: s => Object.keys(s.dex.caught).length >= Object.keys(SPECIES).length, reward: { coins: 500 } },
+  { id: 'golden',       icon: '✨', name: 'Shine Seeker',     desc: 'Catch a golden awawa',              check: s => Object.keys(s.dex.golden).length >= 1, reward: { coins: 200 } },
+  { id: 'first-evolve', icon: '🌟', name: 'Growing Up',       desc: 'Evolve an awawa',                   check: s => s.stats.evolutions >= 1, reward: { coins: 80 } },
+  { id: 'battles-10',   icon: '⚔️', name: 'Scrapper',         desc: 'Win 10 battles',                    check: s => s.stats.battles >= 10, reward: { coins: 50 } },
+  { id: 'battles-50',   icon: '🛡️', name: 'Veteran',          desc: 'Win 50 battles',                    check: s => s.stats.battles >= 50, reward: { coins: 150, items: { 'Big Snack': 2 } } },
+  { id: 'first-badge',  icon: '🥇', name: 'Trial by Fluff',   desc: 'Defeat your first Elder',           check: s => Object.keys(s.badges).length >= 1, reward: { items: { 'Snack': 3 } } },
+  { id: 'all-badges',   icon: '👑', name: 'Elder of Elders',  desc: 'Earn all 5 badges',                 check: s => Object.keys(s.badges).length >= 5, reward: { coins: 300 } },
+  { id: 'wanderer',     icon: '👣', name: 'Wanderer',         desc: 'Take 100 exploration steps',        check: s => s.stats.steps >= 100, reward: { coins: 40 } },
+  { id: 'level-30',     icon: '📈', name: 'Personal Trainer', desc: 'Raise an awawa to level 30',        check: s => s.party.some(m => m.level >= 30), reward: { coins: 100 } },
+  { id: 'full-party',   icon: '🎒', name: 'Full House',       desc: 'Have 6 awawas in your party',       check: s => s.party.length >= 6, reward: { items: { 'Big Snack': 1 } } },
+];
