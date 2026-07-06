@@ -1,6 +1,6 @@
 // Awawa Quest service worker — cache-first so the game runs fully offline.
 // Bump CACHE_VERSION on every release to invalidate old assets.
-const CACHE_VERSION = 'awawa-quest-v1.0.0';
+const CACHE_VERSION = 'awawa-quest-v1.0.1';
 const CORE_ASSETS = [
   '.',
   'index.html',

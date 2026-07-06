@@ -54,6 +54,8 @@ const Game = {
     };
     this.markDex(starterSpecies, true);
     this.save();
+    // Refresh the backup too — recovery must never resurrect an old playthrough.
+    try { localStorage.setItem(SAVE_BACKUP_KEY, JSON.stringify(this.state)); } catch (e) { /* ignore */ }
   },
 
   // ---- creature factory ----
@@ -396,6 +398,14 @@ const Game = {
   // Validates + migrates a parsed save object; returns it or null.
   migrate(s) {
     if (!s || !Array.isArray(s.party) || !s.party.length || !s.dex) return null;
+    s.coins = typeof s.coins === 'number' && isFinite(s.coins) ? Math.max(0, Math.floor(s.coins)) : 0;
+    s.items = s.items && typeof s.items === 'object' ? s.items : {};
+    for (const k of Object.keys(s.items)) {
+      if (!ITEMS[k] || !(s.items[k] > 0)) delete s.items[k]; // drop unknown/invalid bag entries
+    }
+    if (!ZONES.find(z => z.id === s.zone)) s.zone = 'cliffs';
+    s.dex.seen = s.dex.seen || {};
+    s.dex.caught = s.dex.caught || {};
     s.dex.golden = s.dex.golden || {};
     s.badges = s.badges || {};
     s.milestones = s.milestones || {};

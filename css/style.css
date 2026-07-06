@@ -30,6 +30,7 @@ body {
   display: flex;
   justify-content: center;
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 #app {
@@ -388,4 +389,9 @@ button.danger { background: var(--bad); color: #fff; }
   .battle-stage { height: 260px; }
   .statbox { min-width: 138px; font-size: 0.74rem; }
   .hub-nav button { font-size: 0.72rem; }
+  /* keep statboxes clear of the sprites on narrow phones */
+  .combatant.enemy { transform: scale(0.62); transform-origin: top right; }
+  .combatant.player { transform: scale(0.7); transform-origin: bottom left; }
+  .statbox { min-width: 0; max-width: 46vw; }
+  .dex-grid { gap: 6px; }
 }

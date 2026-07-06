@@ -101,6 +101,9 @@ const Music = (() => {
     summit: { root: 110.0, scale: [0, 3, 5, 7, 10], bpm: 112, wave: 'triangle', chime: false },
     battle: { root: 164.8, scale: [0, 3, 5, 7, 10], bpm: 138, wave: 'square',   chime: false },
     boss:   { root: 123.5, scale: [0, 1, 5, 7, 10], bpm: 148, wave: 'sawtooth', chime: false },
+    shore:  { root: 246.9, scale: [0, 2, 4, 7, 9],  bpm: 86,  wave: 'sine',     chime: true },
+    grotto: { root: 138.6, scale: [0, 3, 5, 7, 10], bpm: 78,  wave: 'triangle', chime: true },
+    lagoon: { root: 185.0, scale: [0, 2, 3, 7, 9],  bpm: 74,  wave: 'sine',     chime: true },
   };
 
   let enabled = loadAudioPrefs().musicMuted !== true; // on by default

@@ -218,7 +218,7 @@ const UI = {
           ${s.party.map(m => `
             <div class="party-slot ${m.hp <= 0 ? 'fainted' : ''}">
               ${monSVG(m, { size: 56 })}
-              <div>${m.golden ? '✨' : ''}${this.esc(Game.displayName(m)).slice(0, 10)}</div>
+              <div>${m.golden ? '✨' : ''}${this.esc(Game.displayName(m).slice(0, 10))}</div>
               <div class="lv">Lv ${m.level} · ${m.hp}/${m.maxHp}</div>
             </div>`).join('')}
         </div>
@@ -258,7 +258,7 @@ const UI = {
       ${this.topbar()}
       <div class="back-row"><button data-action="go-hub">← Back</button></div>
       <div class="panel"><h2>📖 Journal</h2>
-        <p class="muted">Milestones ${doneCount}/${MILESTONES.length} · Badges ${Object.keys(s.badges).length}/5 · Battles won ${s.stats.battles} · Trainers beaten ${s.stats.trainerWins} · Rival wins ${s.rival.fights}/5 · Tower best ${s.tower.best} · Catches ${s.stats.catches} · Steps ${s.stats.steps}</p>
+        <p class="muted">Milestones ${doneCount}/${MILESTONES.length} · Badges ${Object.keys(s.badges).length}/${ZONES.filter(z => ELDERS[z.id]).length} · Battles won ${s.stats.battles} · Trainers beaten ${s.stats.trainerWins} · Rival wins ${s.rival.fights}/5 · Tower best ${s.tower.best} · Catches ${s.stats.catches} · Steps ${s.stats.steps}</p>
       </div>
       <div class="panel">
         <h3 style="margin-bottom:8px">🏅 Badges</h3>
@@ -359,7 +359,7 @@ const UI = {
   showHeldPicker(idx) {
     const mon = Game.state.party[idx];
     if (!mon) return this.showParty();
-    const owned = Object.entries(Game.state.items).filter(([n]) => ITEMS[n].held);
+    const owned = Object.entries(Game.state.items).filter(([n]) => ITEMS[n] && ITEMS[n].held);
     this.render(`
       ${this.topbar()}
       <div class="back-row"><button data-action="show-party">← Back</button></div>
@@ -455,7 +455,7 @@ const UI = {
         Golden found: ${Object.keys(s.dex.golden).length} · Steps: ${s.stats.steps}</p>
         <p style="font-weight:700;margin-top:8px">🌙 Sailors speak of new islands across the strait… (check Travel)</p>
         <div class="party-strip" style="margin:14px 0">
-          ${s.party.map(m => `<div class="party-slot">${monSVG(m, { size: 56 })}<div>${this.esc(Game.displayName(m)).slice(0, 10)}</div><div class="lv">Lv ${m.level}</div></div>`).join('')}
+          ${s.party.map(m => `<div class="party-slot">${monSVG(m, { size: 56 })}<div>${this.esc(Game.displayName(m).slice(0, 10))}</div><div class="lv">Lv ${m.level}</div></div>`).join('')}
         </div>
         <p class="muted">The world stays open — golden awawas and a complete Awadex still await.</p>
         <button class="primary big" data-action="go-hub" style="margin-top:10px">Keep playing ➜</button>
@@ -823,7 +823,7 @@ const UI = {
       ${this.topbar()}
       <div class="panel ending-panel">
         <h2>📅 Stage ${clearedStage}/5 cleared!</h2>
-        <p style="font-weight:700;margin:8px 0">${coins ? `+🪙 ${coins}` : 'Already claimed today — practice round!'}</p>
+        <p style="font-weight:700;margin:8px 0">${coins ? `+🪙 ${coins} stage bonus` : 'Already claimed today — practice round!'}</p>
         <p class="muted">The spirits restore your party. Next: a ${st.golden ? '✨ golden ' : ''}Lv ${st.level} challenger…</p>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px">
           <button class="primary big" data-action="daily-next">⚡ Stage ${clearedStage + 1}</button>
@@ -853,12 +853,12 @@ const UI = {
       ${this.topbar()}
       <div class="panel ending-panel">
         <h2>🗼 Floor ${clearedFloor} cleared!</h2>
-        <p style="font-weight:700;margin:8px 0">+🪙 ${coins} · Best: floor ${Game.state.tower.best}</p>
+        <p style="font-weight:700;margin:8px 0">+🪙 ${coins} floor bonus (on top of battle spoils) · Best: floor ${Game.state.tower.best}</p>
         <p class="muted">Your party catches its breath (+20% HP each).
         ${bossNext ? '<br><b>Something enormous is stomping around on the next floor…</b>' : ''}</p>
         <div class="party-strip" style="margin:12px 0">
           ${Game.state.party.map(m => `<div class="party-slot ${m.hp <= 0 ? 'fainted' : ''}">${monSVG(m, { size: 56 })}
-            <div>${this.esc(Game.displayName(m)).slice(0, 10)}</div><div class="lv">${m.hp}/${m.maxHp}</div></div>`).join('')}
+            <div>${this.esc(Game.displayName(m).slice(0, 10))}</div><div class="lv">${m.hp}/${m.maxHp}</div></div>`).join('')}
         </div>
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
           <button class="primary big" data-action="tower-next">⬆️ Floor ${next} ${bossNext ? '👹' : ''}</button>
@@ -871,6 +871,10 @@ const UI = {
   explore() {
     const s = Game.state;
     const zone = this.currentZone();
+    if (!Game.firstHealthy()) {
+      this.toast('Your whole party has fainted! Rest first.');
+      return;
+    }
     s.stats.steps += 1;
     if (Game.advanceTime()) {
       const p = Game.phase();
@@ -895,21 +899,12 @@ const UI = {
     const roll = Math.random();
 
     if (roll < 0.50) {
-      const lead = Game.firstHealthy();
-      if (!lead) {
-        this.toast('Your whole party has fainted! Rest first.');
-        return;
-      }
       // Leader battles; if the actual leader fainted, first healthy steps up.
-      Battle.start(lead, Game.rollEncounter(zone));
+      Battle.start(Game.firstHealthy(), Game.rollEncounter(zone));
       Game.save();
       this.showBattle();
     } else if (roll < 0.62) {
       const lead = Game.firstHealthy();
-      if (!lead) {
-        this.toast('Your whole party has fainted! Rest first.');
-        return;
-      }
       const trainer = Game.makeTrainer(zone);
       if (!trainer) { this.showHub('👀 Someone was here a moment ago…'); return; }
       Battle.start(lead, trainer.queue[0], { trainer });
@@ -957,9 +952,22 @@ const UI = {
         el.textContent = Music.muted ? '🔕' : '🎵';
         break;
       }
-      case 'go-title': this.showTitle(); break;
+      case 'go-title': {
+        // Leaving mid-battle forfeits it and must settle any tower/daily run,
+        // otherwise the next wild win gets mis-credited as a floor/stage clear.
+        if (Battle.cur && !Battle.cur.over &&
+            !confirm('Abandon the current battle and return to the title screen?')) break;
+        Battle.cur = null;
+        this._tower = null;
+        this._daily = null;
+        this.showTitle();
+        break;
+      }
       case 'new-game': this.showStarterPick_orConfirm(); break;
       case 'continue-game':
+        Battle.cur = null;
+        this._tower = null;
+        this._daily = null;
         if (Game.load()) this.showHub();
         else this.toast('No save found — starting fresh!') || this.showStarterPick();
         break;

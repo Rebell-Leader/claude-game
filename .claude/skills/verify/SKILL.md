@@ -85,6 +85,12 @@ global module at `/opt/node22/lib/node_modules/playwright`).
 
 ## Gotchas
 
+- CRITICAL for test drivers: the game registers `beforeunload`/`visibilitychange`
+  handlers that call `Game.save()`. Any crafted `localStorage.setItem(SAVE_KEY, …)`
+  followed by `page.reload()` gets silently clobbered by the in-memory state.
+  Always set `Game.state = null` in the same `page.evaluate` before writing a
+  seeded save.
+
 - Collect `console` type=error and `pageerror` — the game has no error overlay.
 - `confirm()` dialogs guard new-game-over-save, release, and save wipe; register
   a dialog handler if driving those paths.
