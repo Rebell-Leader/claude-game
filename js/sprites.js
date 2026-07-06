@@ -71,13 +71,16 @@ function awawaSVG(speciesName, opts = {}) {
     crown: `<g><path d="M76 26 L84 2 L98 20 L112 -4 L126 20 L140 2 L148 26 Z" fill="#ffd25e" stroke="#e0a91f" stroke-width="3"/>
             <circle cx="112" cy="12" r="4" fill="#e05c7a"/></g>
             <circle cx="100" cy="80" r="90" fill="#fff5d6" opacity="0.22"/>`,
+    crescent: `<path d="M100 -8 a26 26 0 1 0 22 40 a20 20 0 0 1 -22 -40" fill="#f2f4ff" stroke="#aab4dd" stroke-width="3"/>
+            <g fill="#e6ebff">${star(48, 22, 7)}${star(158, 14, 6)}${star(24, 74, 5)}${star(180, 60, 5)}</g>
+            <circle cx="100" cy="80" r="92" fill="#dfe6ff" opacity="0.2"/>`,
   }[s.feature] || '';
 
   const flip = facing === 'left' ? `transform="translate(200,0) scale(-1,1)"` : '';
   return `<svg viewBox="-10 -14 220 190" width="${size}" height="${size * 0.86}" class="awawa-svg" aria-label="${speciesName}">
   <g ${flip}>
     <g transform="translate(100,86) scale(${big}) translate(-100,-86)">
-      ${['rays', 'corona', 'crown', 'stars', 'moonstars', 'swirl', 'bigswirl'].includes(s.feature) ? features : ''}
+      ${['rays', 'corona', 'crown', 'crescent', 'stars', 'moonstars', 'swirl', 'bigswirl'].includes(s.feature) ? features : ''}
       <ellipse cx="100" cy="152" rx="62" ry="10" fill="#000" opacity="0.14"/>
       ${['spikes', 'crag', 'fern', 'canopy', 'sprout'].includes(s.feature) ? features : ''}
       <path d="M30 108 Q28 40 100 38 Q172 40 170 108 Q170 148 100 148 Q30 148 30 108 Z" fill="${s.body}"/>

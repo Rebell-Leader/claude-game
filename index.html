@@ -2,8 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Awawa Quest — collect the screaming hyraxes</title>
+  <meta name="description" content="A Pokémon-like browser game where you catch, train and evolve adorable screaming hyraxes. 24 species, elder boss trials, a rival, day/night cycle, endless tower & daily runs. Procedural art & music, zero dependencies, works offline.">
+  <meta name="theme-color" content="#f2994a">
+
+  <!-- Social / link previews -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Awawa Quest — collect the screaming hyraxes">
+  <meta property="og:description" content="Catch. Train. Scream. A cozy Pokémon-like with 24 collectable hyraxes, boss trials, a rival, day/night, an endless tower and daily challenge runs — all in vanilla JS.">
+  <meta property="og:image" content="docs/cover.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Awawa Quest — collect the screaming hyraxes">
+  <meta name="twitter:description" content="A cozy Pokémon-like with 24 collectable screaming hyraxes. Plays in any browser, works offline.">
+  <meta name="twitter:image" content="docs/cover.png">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐹</text></svg>">
 </head>
@@ -15,5 +35,13 @@
   <script src="js/game.js"></script>
   <script src="js/battle.js"></script>
   <script src="js/ui.js"></script>
+  <script>
+    // Offline/installable support. file:// and unsupported browsers just skip it.
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => { /* offline mode unavailable */ });
+      });
+    }
+  </script>
 </body>
 </html>

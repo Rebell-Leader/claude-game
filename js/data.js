@@ -167,6 +167,44 @@ const SPECIES = {
     sprite: { body: '#f0e6d2', belly: '#fffaf0', ear: '#d4c5a3', feature: 'crown', eyes: 'sparkle', big: 1.3 },
     desc: 'The first scream. When it cries AWAWAWA, every hyrax on earth answers.',
   },
+  // ---- Moonlit Isles (post-game region) ----
+  Driftawa: {
+    dex: 19, type: 'Wind', base: { hp: 62, atk: 68, def: 60, spd: 88 }, catchRate: 0.3, baseXp: 170,
+    evolvesTo: 'Tidalrax', evolveLevel: 34,
+    learnset: [{ lvl: 1, move: 'Gust' }, { lvl: 1, move: 'Zephyr Dash' }, { lvl: 30, move: 'Fluff Up' }, { lvl: 33, move: 'Cyclone' }],
+    sprite: { body: '#6fb5d8', belly: '#d9f1fa', ear: '#4a92b8', feature: 'swirl', eyes: 'normal' },
+    desc: 'Floats on driftwood across the strait, steering with its ears. Rarely arrives on purpose.',
+  },
+  Tidalrax: {
+    dex: 20, type: 'Wind', base: { hp: 80, atk: 88, def: 76, spd: 104 }, catchRate: 0.12, baseXp: 260,
+    learnset: [{ lvl: 1, move: 'Zephyr Dash' }, { lvl: 34, move: 'Cyclone' }, { lvl: 40, move: 'Headbutt' }, { lvl: 44, move: 'Fluff Up' }],
+    sprite: { body: '#4693bd', belly: '#c4e9f5', ear: '#2f7095', feature: 'bigswirl', eyes: 'sparkle', big: 1.2 },
+    desc: 'Commands the tide by screaming at it. The tide, remarkably, listens.',
+  },
+  Glimmerawa: {
+    dex: 21, type: 'Sun', base: { hp: 70, atk: 82, def: 72, spd: 86 }, catchRate: 0.15, baseXp: 230,
+    learnset: [{ lvl: 1, move: 'Sunbeam' }, { lvl: 1, move: 'Warm Glow' }, { lvl: 34, move: 'Solar Blast' }, { lvl: 40, move: 'Battle Squeak' }],
+    sprite: { body: '#e8d48a', belly: '#fdf6d8', ear: '#c4ad5c', feature: 'stars', eyes: 'sparkle', big: 1.05 },
+    desc: 'Stores moonlight in its fur and pays it back at dawn with interest.',
+  },
+  Corallawa: {
+    dex: 22, type: 'Rock', base: { hp: 88, atk: 84, def: 100, spd: 52 }, catchRate: 0.15, baseXp: 240,
+    learnset: [{ lvl: 1, move: 'Rock Roll' }, { lvl: 1, move: 'Fluff Up' }, { lvl: 34, move: 'Boulder Slam' }, { lvl: 40, move: 'Stare' }],
+    sprite: { body: '#e88a9a', belly: '#fbdde3', ear: '#c05f72', feature: 'crag', eyes: 'sleepy', big: 1.15 },
+    desc: 'Coral grew over it during an exceptionally long nap. It has decided to keep it.',
+  },
+  Mistrawa: {
+    dex: 23, type: 'Dream', base: { hp: 92, atk: 78, def: 82, spd: 66 }, catchRate: 0.12, baseXp: 250,
+    learnset: [{ lvl: 1, move: 'Nap Attack' }, { lvl: 1, move: 'Doze Ray' }, { lvl: 34, move: 'Nightmare' }, { lvl: 40, move: 'Stare' }],
+    sprite: { body: '#b8b3d6', belly: '#eceaf7', ear: '#918bb5', feature: 'moonstars', eyes: 'closed', big: 1.1 },
+    desc: 'Half awawa, half sea fog. Walk through it and you dream of warm rocks for a week.',
+  },
+  Lunawa: {
+    dex: 24, type: 'Dream', base: { hp: 105, atk: 95, def: 95, spd: 95 }, catchRate: 0.05, baseXp: 360, legendary: true,
+    learnset: [{ lvl: 1, move: 'Nightmare' }, { lvl: 1, move: 'Cyclone' }, { lvl: 1, move: 'Warm Glow' }, { lvl: 1, move: 'SCREAM' }],
+    sprite: { body: '#cfd6ea', belly: '#f4f6fd', ear: '#a5aecf', feature: 'crescent', eyes: 'sparkle', big: 1.28 },
+    desc: 'The moon\'s reflection that climbed out of the lagoon one night and stayed. Screams in silver.',
+  },
 };
 
 const ZONES = [
@@ -214,6 +252,33 @@ const ZONES = [
       { species: 'Bouldawa', w: 22 }, { species: 'Grumpawa', w: 20 }, { species: 'Yellawa', w: 18 },
       { species: 'Galewa', w: 15 }, { species: 'Echorax', w: 15 }, { species: 'Cliffawa', w: 6 },
       { species: 'The Great Awawa', w: 4 },
+    ],
+  },
+  {
+    id: 'shore', name: 'Silver Shore', icon: '🏖️', minLevel: 28, levels: [28, 36], region: 'Moonlit Isles',
+    palette: ['#a8d8e8', '#5891c9'], ground: '#c9b98a',
+    blurb: 'Across the strait, the sand glitters like crushed moons.',
+    encounters: [
+      { species: 'Driftawa', w: 30 }, { species: 'Corallawa', w: 20 }, { species: 'Glimmerawa', w: 18 },
+      { species: 'Galewa', w: 17 }, { species: 'Solawa', w: 15 },
+    ],
+  },
+  {
+    id: 'grotto', name: 'Glowcap Grotto', icon: '🍄', minLevel: 32, levels: [32, 40], region: 'Moonlit Isles',
+    palette: ['#8a7fc4', '#4b3f80'], ground: '#37305e',
+    blurb: 'Mushrooms light the dark. Something in here snores like the sea.',
+    encounters: [
+      { species: 'Mistrawa', w: 28 }, { species: 'Corallawa', w: 20 }, { species: 'Snoozerax', w: 18 },
+      { species: 'Echorax', w: 18 }, { species: 'Driftawa', w: 16 },
+    ],
+  },
+  {
+    id: 'lagoon', name: 'Moonlit Lagoon', icon: '🌊', minLevel: 36, levels: [36, 44], region: 'Moonlit Isles',
+    palette: ['#7d95d8', '#3a4a8a'], ground: '#2c3868',
+    blurb: 'The moon keeps a spare reflection here. Do not startle it.',
+    encounters: [
+      { species: 'Tidalrax', w: 26 }, { species: 'Mistrawa', w: 24 }, { species: 'Glimmerawa', w: 22 },
+      { species: 'Corallawa', w: 14 }, { species: 'Echorax', w: 10 }, { species: 'Lunawa', w: 4 },
     ],
   },
 ];
@@ -267,6 +332,18 @@ const TRAINERS = {
       intro: 'I climbed forty years for wisdom. Mostly I found awawas.', winQuip: 'Ah. The wisdom was losing gracefully.' },
     { name: 'Scream Chaser Rae', avatar: '🌪️', team: ['Yellawa', 'Echorax', 'Galewa'], coins: 240,
       intro: 'I chase the loudest screams on earth. You scream interesting.', winQuip: 'THAT was a scream worth chasing!' },
+  ],
+  shore: [
+    { name: 'Beachcomber Bo', avatar: '🏖️', team: ['Driftawa', 'Corallawa'], coins: 300,
+      intro: 'The tide brings me treasures. Today it brought me an opponent!', winQuip: 'Back to combing. The beach never loses.' },
+  ],
+  grotto: [
+    { name: 'Mushroom Monk Fen', avatar: '🍄', team: ['Mistrawa', 'Snoozerax', 'Corallawa'], coins: 380,
+      intro: 'The glowcaps whisper of your coming. They also whisper recipes.', winQuip: 'The mushrooms saw this outcome. I chose not to listen.' },
+  ],
+  lagoon: [
+    { name: 'Moon Priestess Isla', avatar: '🌕', team: ['Glimmerawa', 'Mistrawa', 'Tidalrax'], coins: 450,
+      intro: 'The moon has two reflections tonight. Let us see which one blinks.', winQuip: 'The moon blinked. Astonishing.' },
   ],
 };
 
@@ -343,6 +420,12 @@ const ELDERS = {
     intro: 'The First Scream itself descends from the peak. Every hyrax on earth goes quiet to listen.',
     win: 'THE GREAT AWAWA screams your name across every cliff in the world. You are legend now.',
   },
+  lagoon: {
+    name: 'Tidemother Naia', species: 'Tidalrax', level: 42, boost: 1.18,
+    badge: 'Tide Badge', icon: '🌊', reward: { coins: 1500, items: { 'Comfy Blanket': 3, 'Big Snack': 3 } },
+    intro: 'The lagoon rises into the shape of an awawa. "The moon vouches for you. I do not. Yet."',
+    win: 'Naia dissolves into spray, laughing. The moon\'s reflection bows to you.',
+  },
 };
 
 // Milestones auto-complete and pay out the moment their condition is met.
@@ -350,7 +433,7 @@ const MILESTONES = [
   { id: 'first-catch',  icon: '🪨', name: 'First Friend',     desc: 'Catch your first awawa',            check: s => s.stats.catches >= 1, reward: { coins: 30 } },
   { id: 'collector-5',  icon: '📔', name: 'Collector',        desc: 'Catch 5 different species',         check: s => Object.keys(s.dex.caught).length >= 5, reward: { coins: 60, items: { 'Smooth Stone': 2 } } },
   { id: 'collector-10', icon: '📚', name: 'Curator',          desc: 'Catch 10 different species',        check: s => Object.keys(s.dex.caught).length >= 10, reward: { coins: 150, items: { 'Comfy Blanket': 1 } } },
-  { id: 'dex-complete', icon: '🏆', name: 'Awadex Master',    desc: 'Catch all 18 species',              check: s => Object.keys(s.dex.caught).length >= Object.keys(SPECIES).length, reward: { coins: 500 } },
+  { id: 'dex-complete', icon: '🏆', name: 'Awadex Master',    desc: 'Catch every species in the Awadex', check: s => Object.keys(s.dex.caught).length >= Object.keys(SPECIES).length, reward: { coins: 500 } },
   { id: 'golden',       icon: '✨', name: 'Shine Seeker',     desc: 'Catch a golden awawa',              check: s => Object.keys(s.dex.golden).length >= 1, reward: { coins: 200 } },
   { id: 'first-evolve', icon: '🌟', name: 'Growing Up',       desc: 'Evolve an awawa',                   check: s => s.stats.evolutions >= 1, reward: { coins: 80 } },
   { id: 'battles-10',   icon: '⚔️', name: 'Scrapper',         desc: 'Win 10 battles',                    check: s => s.stats.battles >= 10, reward: { coins: 50 } },
@@ -363,6 +446,10 @@ const MILESTONES = [
   { id: 'rival-final',  icon: '😼', name: 'Rivals Forever',   desc: 'Win all 5 battles against Scree',   check: s => s.rival.fights >= 5, reward: { coins: 400 } },
   { id: 'tower-10',     icon: '🗼', name: 'Tower Climber',    desc: 'Reach floor 10 of the Scream Tower', check: s => s.tower.best >= 10, reward: { coins: 300 } },
   { id: 'tower-25',     icon: '🌋', name: 'Scream Ascendant', desc: 'Reach floor 25 of the Scream Tower', check: s => s.tower.best >= 25, reward: { coins: 800 } },
+  { id: 'best-friends', icon: '💞', name: 'Best Friends',     desc: 'Max out an awawa\'s bond (100)',     check: s => s.party.some(m => (m.bond || 0) >= 100), reward: { coins: 150 } },
+  { id: 'daily-first',  icon: '📅', name: 'Daily Screamer',   desc: 'Clear a Daily Scream Run',          check: s => !!s.daily.lastClearDate, reward: { coins: 150 } },
+  { id: 'daily-streak', icon: '🔥', name: 'On a Roll',        desc: 'Reach a 3-day daily streak',        check: s => s.daily.streak >= 3, reward: { coins: 400 } },
+  { id: 'tide-badge',   icon: '🌊', name: 'Isles Champion',   desc: 'Defeat Tidemother Naia',            check: s => !!s.badges.lagoon, reward: { coins: 500 } },
   { id: 'level-30',     icon: '📈', name: 'Personal Trainer', desc: 'Raise an awawa to level 30',        check: s => s.party.some(m => m.level >= 30), reward: { coins: 100 } },
   { id: 'full-party',   icon: '🎒', name: 'Full House',       desc: 'Have 6 awawas in your party',       check: s => s.party.length >= 6, reward: { items: { 'Big Snack': 1 } } },
 ];

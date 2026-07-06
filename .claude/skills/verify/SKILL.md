@@ -61,6 +61,27 @@ global module at `/opt/node22/lib/node_modules/playwright`).
     skip the ending flow). Hub shows `tower-enter`. Win floor →
     interstitial with `tower-next`/`tower-leave`; flee ends the run back to
     the hub; `tower.best` persists; loss halves coins like a normal wipe.
+15. Release gate (run all of these before shipping):
+    - Data integrity sweep in page.evaluate: every learnset move ∈ MOVES,
+      every encounter/trainer/elder/rival species ∈ SPECIES, dex numbers
+      contiguous, `awawaSVG(name)` contains no "undefined" for all species.
+    - PWA: fetch manifest.webmanifest + sw.js (200), and
+      `navigator.serviceWorker.getRegistrations()` non-empty on localhost.
+    - Keyboard: press "2" on starter screen picks starter #2, "E" explores,
+      "1" picks first battle action, Enter continues.
+    - Daily Scream Run (`daily-enter`): party fully heals between stages;
+      species/goldens are date-seeded (levels = maxPartyLv−6+3i). Clearing
+      all 5 sets `daily.bestToday=5`, `streak`, pays once/day. Drive with a
+      DIVERSE Lv-45 trio — one attacker can legitimately lose the ramp.
+    - Saves: `Game.exportCode()` → `AWAWA1.` prefix; `importCode` round-trips;
+      corrupting the main key then reloading recovers from
+      `awawa-quest-save-backup`.
+    - Moonlit Isles: Travel shows a region divider; lagoon rolls
+      Tidalrax/Mistrawa/Lunawa; beat Tidemother Naia with a Dream attacker
+      (Wind elder) for the Tide Badge.
+    - Regenerate icons/cover after visual changes:
+      scratchpad gen-assets.js pattern (icons/, docs/). Bump sw.js
+      CACHE_VERSION on every release.
 
 ## Gotchas
 

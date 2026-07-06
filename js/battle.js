@@ -57,7 +57,8 @@ const Battle = {
     const stab = SPECIES[atkMon.species].type === move.type ? 1.5 : 1;
     const eff = typeMult(move.type, SPECIES[defMon.species].type);
     const held = Game.heldSpec(atkMon);
-    const heldMult = held && held.boost === move.type ? held.mult : 1;
+    let heldMult = held && held.boost === move.type ? held.mult : 1;
+    if (attackerSide === 'player') heldMult *= Game.bondMult(atkMon);
     const critChance = held && held.crit ? held.crit : 0.0625;
     const crit = Math.random() < critChance ? 1.5 : 1;
     const rand = 0.85 + Math.random() * 0.15;
@@ -157,6 +158,7 @@ const Battle = {
       b.over = true;
       b.result = 'win';
       Game.state.stats.battles += 1;
+      Game.addBond(b.player, b.elder || b.trainer ? 4 : 2);
       let xp = Game.xpReward(b.enemy);
       if (b.trainer) {
         Game.state.stats.trainerWins += 1;
@@ -319,6 +321,7 @@ const Battle = {
     }
     const gain = Math.min(item.heal, mon.maxHp - mon.hp);
     mon.hp += gain;
+    Game.addBond(mon, 5); // sharing snacks builds trust
     events.push({ t: 'heal', side: 'player', amount: gain });
     events.push({ t: 'msg', text: `${Game.displayName(mon)} ate the ${itemName}. +${gain} HP!` });
     this.execMove('enemy', this.enemyPickMove(), events);

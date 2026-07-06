@@ -87,17 +87,70 @@ const UI = {
     const hasSave = (() => { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } })();
     document.documentElement.style.setProperty('--zone-a', '#ffd89b');
     document.documentElement.style.setProperty('--zone-b', '#f2994a');
+    document.documentElement.style.setProperty('--phase-tint', 'rgba(255,255,255,0)');
     Music.play('title');
     this.render(`
       <div class="title-screen">
         <div class="hero">${awawaSVG('The Great Awawa', { size: 210 })}</div>
         <h1 class="logo-big">AWAWA QUEST</h1>
-        <p class="tagline">Catch. Train. Scream. Collect all 18 awawas!</p>
+        <p class="tagline">Catch. Train. Scream. Collect all ${Object.keys(SPECIES).length} awawas!</p>
         <div class="menu">
           ${hasSave ? `<button class="primary big" data-action="continue-game">▶ Continue</button>` : ''}
           <button class="${hasSave ? 'ghost' : 'primary'} big" data-action="new-game">✨ New Game</button>
+          <div style="display:flex;gap:10px">
+            <button class="ghost" data-action="how-to">❓ How to Play</button>
+            <button class="ghost" data-action="save-tools">💾 Save Tools</button>
+          </div>
           ${hasSave ? `<button class="ghost" data-action="wipe-save">🗑 Delete Save</button>` : ''}
         </div>
+        <p class="credits">Made with vanilla JS · art, music &amp; screams procedurally generated · works offline as a PWA</p>
+      </div>`);
+  },
+
+  showHowTo() {
+    this.render(`
+      ${this.topbar()}
+      <div class="back-row"><button data-action="go-title">← Back</button></div>
+      <div class="panel">
+        <h2>❓ How to Play</h2>
+        <p style="margin:8px 0"><b>Loop:</b> Explore → battle wild awawas → weaken them and throw a 🪨 Pebble to catch →
+        train, evolve and equip your party → beat each zone's <b>Elder Trial</b> for badges → face THE GREAT AWAWA.</p>
+        <p style="margin:8px 0"><b>Types:</b> Rock ▶ Sun ▶ Leaf ▶ Rock and Sound ▶ Dream ▶ Wind ▶ Sound (2× / ½×).</p>
+        <p style="margin:8px 0"><b>Time:</b> the world cycles dawn→day→dusk→night as you explore. Night is Dream time; dawn doubles ✨golden odds. Resting skips a phase.</p>
+        <p style="margin:8px 0"><b>Beyond the badges:</b> your rival Scree, held charms, bond hearts, the endless Scream Tower, a daily seeded challenge and the post-game Moonlit Isles.</p>
+      </div>
+      <div class="panel">
+        <h3>⌨️ Keyboard (PC)</h3>
+        <p class="muted" style="margin-top:6px">
+        <b>1–9</b> pick battle actions / hub menu · <b>E</b> explore · <b>R</b> rest ·
+        <b>P</b> party · <b>T</b> travel · <b>X</b> awadex · <b>J</b> journal · <b>B</b> shop ·
+        <b>Esc</b> back · <b>Enter</b> continue</p>
+        <p class="muted" style="margin-top:6px">On mobile, everything is tappable — add the game to your home screen to play fullscreen &amp; offline.</p>
+      </div>`);
+  },
+
+  showSaveTools(msg) {
+    if (!Game.state) Game.load();
+    const code = Game.exportCode();
+    this.render(`
+      ${this.topbar()}
+      <div class="back-row"><button data-action="go-title">← Back</button></div>
+      <div class="panel">
+        <h2>💾 Save Tools</h2>
+        <p class="muted">Your game auto-saves after every action (with an automatic backup copy). Use codes to move progress between devices.</p>
+        ${msg ? `<p class="event-flash" style="font-weight:800;margin-top:6px">${msg}</p>` : ''}
+      </div>
+      <div class="panel">
+        <h3>Export</h3>
+        ${code ? `
+          <textarea class="save-code" id="export-code" readonly>${code}</textarea>
+          <button class="primary" data-action="save-export-copy" style="margin-top:8px">📋 Copy to clipboard</button>`
+        : '<p class="muted">No save to export yet — start a game first.</p>'}
+      </div>
+      <div class="panel">
+        <h3>Import</h3>
+        <textarea class="save-code" id="import-code" placeholder="Paste an AWAWA1. save code here…"></textarea>
+        <button class="primary" data-action="save-import" style="margin-top:8px">📥 Import save</button>
       </div>`);
   },
 
@@ -142,6 +195,12 @@ const UI = {
         ${Object.keys(s.badges).length >= 5 ? `<button class="elder-btn tower-btn" data-action="tower-enter">
           🗼 Scream Tower — endless gauntlet${s.tower.best ? ` (best: floor ${s.tower.best})` : ''}
         </button>` : ''}
+        ${(() => {
+          const d = Game.dailyState();
+          return `<button class="elder-btn daily-btn" data-action="daily-enter">
+            📅 Daily Scream Run — ${d.bestToday >= 5 ? 'cleared today ✓' : `stage ${d.bestToday}/5`}${d.streak ? ` · 🔥 ${d.streak}` : ''}
+          </button>`;
+        })()}
       </div>
       <div class="panel">
         <div class="hub-nav">
@@ -153,7 +212,7 @@ const UI = {
           <button data-action="rest"><span class="ico">🛏️</span>Rest</button>
         </div>
         <div class="badge-row" title="Badges">
-          ${ZONES.map(z => `<span class="badge-slot ${s.badges[z.id] ? 'earned' : ''}">${s.badges[z.id] ? ELDERS[z.id].icon : '◽'}</span>`).join('')}
+          ${ZONES.filter(z => ELDERS[z.id]).map(z => `<span class="badge-slot ${s.badges[z.id] ? 'earned' : ''}">${s.badges[z.id] ? ELDERS[z.id].icon : '◽'}</span>`).join('')}
         </div>
         <div class="party-strip">
           ${s.party.map(m => `
@@ -174,13 +233,20 @@ const UI = {
       <div class="back-row"><button data-action="go-hub">← Back</button></div>
       <div class="panel"><h2>🗺️ Travel</h2><p class="muted">Beat a zone's Elder to unlock the next one (a strong enough party also works).</p></div>
       ${ZONES.map((z, i) => {
-        const prevBadge = i === 0 || s.badges[ZONES[i - 1].id];
+        const prev = i > 0 ? ZONES[i - 1] : null;
+        const prevElder = prev && ELDERS[prev.id];
+        const prevBadge = !prev || s.badges[prev.id];
         const locked = !(prevBadge || maxLv >= z.minLevel);
-        return `<div class="zone-card ${locked ? 'locked' : ''}" ${locked ? '' : `data-action="travel" data-arg="${z.id}"`}
+        const lockText = prevElder
+          ? `🔒 beat ${prevElder.name.split(' ')[0]} or reach Lv ${z.minLevel}`
+          : `🔒 reach Lv ${z.minLevel}`;
+        const divider = z.region && (!prev || prev.region !== z.region)
+          ? `<div class="region-divider">🌙 ${z.region} <span class="muted" style="font-weight:600">— post-game region</span></div>` : '';
+        return `${divider}<div class="zone-card ${locked ? 'locked' : ''}" ${locked ? '' : `data-action="travel" data-arg="${z.id}"`}
             style="background:linear-gradient(120deg, ${z.palette[0]}, ${z.palette[1]})">
-          <div class="zc-name">${z.icon} ${z.name} ${s.badges[z.id] ? ELDERS[z.id].icon : ''}</div>
+          <div class="zc-name">${z.icon} ${z.name} ${s.badges[z.id] && ELDERS[z.id] ? ELDERS[z.id].icon : ''}</div>
           <div class="zc-sub">${z.blurb}</div>
-          <div class="zc-badge">${locked ? `🔒 beat ${ELDERS[ZONES[i - 1].id].name.split(' ')[0]} or reach Lv ${z.minLevel}` : `Lv ${z.levels[0]}–${z.levels[1]}`}</div>
+          <div class="zc-badge">${locked ? lockText : `Lv ${z.levels[0]}–${z.levels[1]}`}</div>
         </div>`;
       }).join('')}`);
   },
@@ -197,7 +263,7 @@ const UI = {
       <div class="panel">
         <h3 style="margin-bottom:8px">🏅 Badges</h3>
         <div class="badge-row big-badges">
-          ${ZONES.map(z => {
+          ${ZONES.filter(z => ELDERS[z.id]).map(z => {
             const e = ELDERS[z.id];
             return `<span class="badge-slot ${s.badges[z.id] ? 'earned' : ''}" title="${e.badge}">${s.badges[z.id] ? e.icon : '◽'}</span>`;
           }).join('')}
@@ -238,7 +304,8 @@ const UI = {
             <div class="nm">${m.golden ? '✨' : ''}${this.esc(Game.displayName(m))} <span class="muted">Lv ${m.level}</span> ${this.chip(sp.type)}</div>
             ${this.hpBarHtml(m, true)}
             ${sel ? `<div class="sub" style="margin-top:4px">ATK ${st.atk} · DEF ${st.def} · SPD ${st.spd}<br>Moves: ${m.moves.join(', ')}<br>
-              Held: ${m.held ? `${ITEMS[m.held].icon} ${m.held}` : 'nothing'}</div>
+              Held: ${m.held ? `${ITEMS[m.held].icon} ${m.held}` : 'nothing'} ·
+              Bond: <span class="hearts" title="Bond grows from battles and snacks. 3♥ = +5% damage, 5♥ = +10%.">${Game.bondHearts(m)}</span></div>
             <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
               <button data-action="party-name" data-arg="${i}">✏️ Name</button>
               <button data-action="party-moves" data-arg="${i}">📖 Moves</button>
@@ -384,8 +451,9 @@ const UI = {
         <h1>🏆 AWAWAWAWA!</h1>
         <p style="font-weight:700;margin:10px 0">You defeated THE GREAT AWAWA and earned every badge.
         From this day, the colonies scream your name at dawn.</p>
-        <p class="muted">Battles won: ${s.stats.battles} · Species caught: ${Object.keys(s.dex.caught).length}/18 ·
+        <p class="muted">Battles won: ${s.stats.battles} · Species caught: ${Object.keys(s.dex.caught).length}/${Object.keys(SPECIES).length} ·
         Golden found: ${Object.keys(s.dex.golden).length} · Steps: ${s.stats.steps}</p>
+        <p style="font-weight:700;margin-top:8px">🌙 Sailors speak of new islands across the strait… (check Travel)</p>
         <div class="party-strip" style="margin:14px 0">
           ${s.party.map(m => `<div class="party-slot">${monSVG(m, { size: 56 })}<div>${this.esc(Game.displayName(m)).slice(0, 10)}</div><div class="lv">Lv ${m.level}</div></div>`).join('')}
         </div>
@@ -663,6 +731,33 @@ const UI = {
     const elderZone = b ? b.elderZone : null;
     Battle.cur = null;
 
+    if (this._daily) {
+      const stageNum = this._daily.stage + 1; // the stage just fought (1-based)
+      if (result === 'win' || result === 'caught') {
+        const r = Game.dailyStageCleared(stageNum);
+        this._daily.stage = stageNum;
+        if (stageNum >= 5) {
+          this._daily = null;
+          Game.healParty();
+          Game.save();
+          this.showHub(r.clearedAll
+            ? `📅 Daily Run cleared! +🪙 ${r.coins + 250} · 🔥 Streak: ${r.streak}. Come back tomorrow!`
+            : `📅 Daily Run cleared again — nice warmup! (rewards were already claimed today)`);
+          this.milestonesTick();
+        } else {
+          Game.healParty(); // the spirits restore you between stages
+          Game.save();
+          this.showDailyInterstitial(stageNum, r.coins);
+        }
+      } else { // fled or lost — the spirits are gentle
+        this._daily = null;
+        Game.healParty();
+        Game.save();
+        this.showHub(`📅 The spirit awawas fade politely. Run over at stage ${stageNum}/5 — try again today or tomorrow!`);
+      }
+      return;
+    }
+
     if (this._tower) {
       const floor = this._tower.floor;
       if (result === 'win' || result === 'caught') {
@@ -705,6 +800,36 @@ const UI = {
       Game.save();
       this.showHub();
     }
+  },
+
+  // ---------- Daily Scream Run ----------
+  startDailyStage() {
+    const lead = Game.firstHealthy();
+    if (!lead) {
+      this._daily = null;
+      this.showHub('📅 Your party has fainted — the spirits reschedule you.');
+      return;
+    }
+    const st = this._daily.run.stages[this._daily.stage];
+    const enemy = Game.makeAwawa(st.species, st.level, { golden: st.golden });
+    Battle.start(lead, enemy);
+    Game.save();
+    this.showBattle();
+  },
+
+  showDailyInterstitial(clearedStage, coins) {
+    const st = this._daily.run.stages[this._daily.stage];
+    this.render(`
+      ${this.topbar()}
+      <div class="panel ending-panel">
+        <h2>📅 Stage ${clearedStage}/5 cleared!</h2>
+        <p style="font-weight:700;margin:8px 0">${coins ? `+🪙 ${coins}` : 'Already claimed today — practice round!'}</p>
+        <p class="muted">The spirits restore your party. Next: a ${st.golden ? '✨ golden ' : ''}Lv ${st.level} challenger…</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px">
+          <button class="primary big" data-action="daily-next">⚡ Stage ${clearedStage + 1}</button>
+          <button class="big" data-action="daily-leave">🚪 Stop here</button>
+        </div>
+      </div>`);
   },
 
   // ---------- Scream Tower ----------
@@ -850,7 +975,46 @@ const UI = {
         this.showHub(`🎉 ${arg} joined you! Your journey begins.`);
         break;
       }
-      case 'go-hub': this._tower = null; this.showHub(); break;
+      case 'go-hub': this._tower = null; this._daily = null; this.showHub(); break;
+      case 'how-to': this.showHowTo(); break;
+      case 'save-tools': this.showSaveTools(); break;
+      case 'save-export-copy': {
+        const ta = document.getElementById('export-code');
+        if (ta) {
+          ta.select();
+          const copy = navigator.clipboard && navigator.clipboard.writeText
+            ? navigator.clipboard.writeText(ta.value)
+            : Promise.reject();
+          copy.then(() => this.toast('📋 Save code copied!'))
+              .catch(() => { try { document.execCommand('copy'); this.toast('📋 Save code copied!'); } catch (err) { this.toast('Select the text and copy it manually.'); } });
+        }
+        break;
+      }
+      case 'save-import': {
+        const ta = document.getElementById('import-code');
+        if (ta && Game.importCode(ta.value)) {
+          Sound.fx('catch');
+          this.showHub('💾 Save imported — welcome back!');
+        } else {
+          this.toast('That code did not look like a valid AWAWA1 save.');
+        }
+        break;
+      }
+      case 'daily-enter': {
+        Game.healParty(); // dailies are a free side mode — no attrition in or out
+        const d = Game.dailyState();
+        this._daily = { run: Game.dailyRun(), stage: Math.min(d.bestToday, 4) };
+        this.startDailyStage();
+        break;
+      }
+      case 'daily-next': Sound.fx('click'); this.startDailyStage(); break;
+      case 'daily-leave': {
+        this._daily = null;
+        Game.healParty();
+        Game.save();
+        this.showHub('📅 You bow out of the Daily Run. The spirits wave.');
+        break;
+      }
       case 'tower-enter':
         this._tower = { floor: 1 };
         this.startTowerFloor();
@@ -963,6 +1127,7 @@ const UI = {
         const mon = s.party[+arg];
         if (mon && mon.hp > 0 && mon.hp < mon.maxHp && Game.useItem('Snack')) {
           mon.hp = Math.min(mon.maxHp, mon.hp + ITEMS['Snack'].heal);
+          Game.addBond(mon, 5);
           Sound.fx('heal');
           Game.save();
         }
@@ -1026,6 +1191,40 @@ const UI = {
       if (!el || el.disabled) return;
       this.handleAction(el.dataset.action, el.dataset.arg, el);
     });
+
+    // Keyboard controls (PC QoL). Digits drive battle actions or hub nav;
+    // letter keys jump between screens; Esc backs out; Enter continues.
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+      const k = e.key.toLowerCase();
+      const click = sel => {
+        const el = this.app.querySelector(sel);
+        if (el && !el.disabled) { el.click(); return true; }
+        return false;
+      };
+      if (/^[1-9]$/.test(k)) {
+        const battleBtns = [...this.app.querySelectorAll('#battle-actions button[data-action]:not([disabled])')];
+        const pool = battleBtns.length
+          ? battleBtns
+          : [...this.app.querySelectorAll('.starter-card[data-action], .hub-nav button[data-action]')];
+        const el = pool[+k - 1];
+        if (el) { el.click(); e.preventDefault(); }
+      } else if (k === 'e') click('[data-action="explore"]');
+      else if (k === 'r') click('[data-action="rest"]');
+      else if (k === 'p') click('[data-action="show-party"]');
+      else if (k === 't') click('[data-action="show-zones"]');
+      else if (k === 'x') click('[data-action="show-dex"]');
+      else if (k === 'j') click('[data-action="show-journal"]');
+      else if (k === 'b') click('[data-action="show-shop"]');
+      else if (k === 'escape') { click('.back-row button') || click('[data-action="battle-menu"][data-arg="main"]'); }
+      else if (k === 'enter') {
+        click('[data-action="battle-end"]') || click('[data-action="tower-next"]') ||
+        click('[data-action="daily-next"]') || click('[data-action="continue-game"]');
+      }
+    });
+
     this.showTitle();
   },
 };
