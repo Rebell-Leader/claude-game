@@ -84,12 +84,20 @@ export/import save codes (title screen → 💾 Save Tools).
 
 The game is 100% static files:
 
+- **Vercel** (recommended) — `npx vercel` in the repo folder, or import the
+  GitHub repo at vercel.com; no framework, no build command, output dir = root.
+  `vercel.json` is already configured (no-cache on `sw.js` so updates roll out
+  instantly). The free Hobby tier is more than enough — static hosting, global
+  CDN, HTTPS (required for the PWA/service worker), custom domains.
 - **itch.io** — zip the repo folder (minus `.git`), upload as an HTML game,
   set `index.html` as the entry point, viewport 480×860 or fullscreen.
 - **GitHub Pages** — Settings → Pages → deploy from branch, done.
-  The service worker gives players offline play + install-to-home-screen.
 - **Anywhere else** — any static host works; no server code, no analytics,
   no external requests at all.
+
+After deploying, set the two `og:image` / `twitter:image` tags in
+`index.html` to the **absolute** URL of `docs/cover.png` on your domain —
+LinkedIn and other scrapers ignore relative image paths.
 
 ## Code layout
 
