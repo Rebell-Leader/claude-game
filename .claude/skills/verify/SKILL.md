@@ -1,0 +1,39 @@
+---
+name: verify
+description: Build/launch/drive recipe for verifying Awawa Quest (static browser game) end-to-end.
+---
+
+# Verifying Awawa Quest
+
+Static site, no build step. Everything is plain script tags (no ES modules), so it
+also works from `file://`, but drive it over HTTP:
+
+```sh
+http-server -p 8123 -s   # or: python3 -m http.server 8123
+```
+
+Drive with Playwright + the preinstalled Chromium
+(`executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'`,
+global module at `/opt/node22/lib/node_modules/playwright`).
+
+## Flows worth driving
+
+1. Title → `[data-action="new-game"]` → pick a starter card
+   (`[data-action="pick-starter"][data-arg="Sunnyrax"]`).
+2. Hub → click `[data-action="explore"]` repeatedly until `.battle-stage` exists
+   (~62% chance per click; cap at ~15 tries).
+3. Battle → click `[data-action="battle-move"]`; wait for the action buttons to
+   re-render before the next click (battle events animate for a few seconds):
+   `waitForFunction(() => document.getElementById('battle-actions')?.querySelector('[data-action]'))`.
+   Battle is over when `[data-action="battle-end"]` appears.
+4. Catch: `battle-menu` arg `catch` → `battle-catch`. Menus: dex/shop/party/zones
+   via `show-dex` / `show-shop` / `show-party` / `show-zones`.
+5. Persistence probe: `page.reload()` → `[data-action="continue-game"]` should
+   exist and restore coins/party (localStorage key `awawa-quest-save-v1`).
+
+## Gotchas
+
+- Collect `console` type=error and `pageerror` — the game has no error overlay.
+- `confirm()` dialogs guard new-game-over-save, release, and save wipe; register
+  a dialog handler if driving those paths.
+- Audio is WebAudio behind a user gesture; harmless headless.
